@@ -1,6 +1,7 @@
 {
   "name": "@eutectic/contracts",
   "version": "0.0.0",
+  "sideEffects": false,
   "private": true,
   "type": "module",
   "main": "./dist/src/index.js",

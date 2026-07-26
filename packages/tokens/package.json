@@ -1,6 +1,9 @@
 {
   "name": "@eutectic/tokens",
   "version": "0.0.0",
+  "sideEffects": [
+    "**/*.css"
+  ],
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
