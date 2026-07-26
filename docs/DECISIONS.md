@@ -6,6 +6,19 @@ Format: `D-NNN · date · who · decision · why · what it forecloses`.
 
 ---
 
+## D-023 · 2026-07-27 · Fable · The D-022 lockstep window: how a dependency-changing mirror update lands without a false-red on shared develop
+
+**Decision.** First execution of the D-022 lockfile flow (BE-24's pre-approved `@types/node ^22`) surfaced an inherent ordering window: the mirror lockfile must land in eutectic-shared *before* the domain PR can go green, but eutectic-shared's own CI reconstructs with siblings pinned at `develop` — where the domain package.json change hasn't merged yet — so the frozen install on the mirror-landing push *must* fail until the domain PR merges. The failure would be by design, not a defect, and a red run on develop's history is a false alarm.
+
+**Protocol, standing for every dependency change:**
+1. Fable verifies the live-root lockfile diff against the approved package.json diff (only the approved dep and its dedupe consequences), syncs via `check-workspace-root.mjs --write`, and lands the mirror commit on shared develop with `[skip ci]`, citing this entry in the commit message.
+2. The domain CTO's PR CI (self at PR ref + mirror lockfile) is the run that actually validates the pairing — it must be green before merge, as usual.
+3. Immediately after the domain PR merges to its develop, Fable dispatches `workflow_dispatch` on eutectic-shared develop; that run must be green and supersedes the skipped one.
+
+Incidental ruling: pnpm deduped the pre-existing transitive `@types/node@26.1.1` (via `@types/pg`, `graphile-config`, `chrome-launcher`, `jest-worker`, `speedline-core`, `@types/interpret` — all accept any version) down to the workspace's declared 22.20.1. Accepted deliberately: type declarations now match the Node 22 runtime floor instead of leading it by four majors.
+
+**Forecloses.** `[skip ci]` on any shared commit other than a mirror-landing in this protocol; merging a dependency-changing domain PR before its own CI is green against the landed mirror; leaving the post-merge dispatch run unrun.
+
 ## D-022 · 2026-07-27 · Fable · M0-SH-05: real CI via workspace reconstruction; the workspace root and the governance record are finally under version control
 
 **Decision.** The pnpm workspace root (package.json, pnpm-workspace.yaml, pnpm-lock.yaml, tsconfig.base.json, turbo.json, .nvmrc) lives one level above the three repos and was tracked by NO git repo — and so were `docs/` (including this file), `board/`, and `CLAUDE.md`. M0-SH-05 fixes both:
