@@ -15,6 +15,10 @@ export type {
   AgentInkName,
   AgentInkPair,
   AgentInks,
+  BreakpointName,
+  Breakpoints,
+  ContainerName,
+  Containers,
   Dur,
   DurStep,
   Ease,
@@ -31,6 +35,8 @@ export type {
   SemanticColors,
   Shadow,
   ShadowName,
+  ShellColumnName,
+  ShellColumns,
   Space,
   SpaceStep,
   ThemeName,
@@ -57,8 +63,10 @@ export {
 export { colors, darkColors, lightColors } from './palette.js';
 export { agentInk, agentInks } from './agent-inks.js';
 export { dur, ease, radius, shadow, space, z } from './scales.js';
+export { breakpoint, container, shell } from './layout.js';
+export { sheetBackdrop, shimmerDuration, tooltipDelay, touchTarget } from './interaction.js';
 export { fontStacks } from './fonts.js';
-export { typeScale } from './type-scale.js';
+export { leadingInitial, typeScale } from './type-scale.js';
 export { voices } from './voices.js';
 export { weight } from './weight.js';
 export { measure } from './measure.js';

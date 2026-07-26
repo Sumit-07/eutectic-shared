@@ -6,10 +6,12 @@
  */
 import { agentInks } from '../agent-inks.js';
 import { fontStacks } from '../fonts.js';
+import { sheetBackdrop, shimmerDuration, tooltipDelay, touchTarget } from '../interaction.js';
+import { breakpoint, container, shell } from '../layout.js';
 import { measure } from '../measure.js';
 import { colors } from '../palette.js';
 import { dur, ease, radius, shadow, space, z } from '../scales.js';
-import { typeScale } from '../type-scale.js';
+import { leadingInitial, typeScale } from '../type-scale.js';
 import { GENERATED_SOURCE, GENERATED_WARNING } from '../tokens.js';
 import type { SemanticColorName, ThemeName } from '../types.js';
 import {
@@ -158,6 +160,36 @@ export function renderThemeTs(): string {
       measure,
       '/** frontend-spec §6.3 / §1 rule 12 — prose measure, ch. No native analogue for `ch`; kept for parity. */',
     ),
+    ...constBlock(
+      'breakpoint',
+      breakpoint,
+      '/** frontend-spec §7.2 — viewport breakpoints, px. Web shells; kept for parity. */',
+    ),
+    ...constBlock(
+      'shell',
+      shell,
+      '/** frontend-spec §7.1 — shell column widths, px. Web shells; kept for parity. */',
+    ),
+    ...constBlock(
+      'container',
+      container,
+      '/** frontend-spec §7.2 — container-query thresholds, px. Web-only; kept for parity. */',
+    ),
+    '/** frontend-spec §7.4 — the gutter initial’s leading (unitless). */',
+    `export const leadingInitial = ${leadingInitial};`,
+    '',
+    '/** frontend-spec §11 — skeleton shimmer cycle, ms. Idle loop, opacity only. */',
+    `export const shimmerDuration = ${shimmerDuration};`,
+    '',
+    '/** frontend-spec §9.1 — tooltip reveal delay, ms. */',
+    `export const tooltipDelay = ${tooltipDelay};`,
+    '',
+    '/** frontend-spec §13 — minimum touch target, px, both axes — including native. */',
+    `export const touchTarget = ${touchTarget};`,
+    '',
+    '/** frontend-spec §11 — sheet backdrop, absolute on purpose: never inverts with theme. */',
+    `export const sheetBackdrop = ${quote(sheetBackdrop)};`,
+    '',
     '/** Surfaces, ink and agent inks, resolved per theme. */',
     'export const themes = {',
     ...themeNames.map((name) => themeLiteral(name)),

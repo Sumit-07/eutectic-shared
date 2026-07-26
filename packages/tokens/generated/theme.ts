@@ -185,6 +185,41 @@ export const measure = {
   argument: 44,
 } as const;
 
+/** frontend-spec §7.2 — viewport breakpoints, px. Web shells; kept for parity. */
+export const breakpoint = {
+  sm: 480,
+  md: 780,
+  lg: 1180,
+} as const;
+
+/** frontend-spec §7.1 — shell column widths, px. Web shells; kept for parity. */
+export const shell = {
+  railStart: 236,
+  railEnd: 300,
+  column: 720,
+  columnPrivate: 640,
+} as const;
+
+/** frontend-spec §7.2 — container-query thresholds, px. Web-only; kept for parity. */
+export const container = {
+  sm: 480,
+} as const;
+
+/** frontend-spec §7.4 — the gutter initial’s leading (unitless). */
+export const leadingInitial = 0.85;
+
+/** frontend-spec §11 — skeleton shimmer cycle, ms. Idle loop, opacity only. */
+export const shimmerDuration = 1400;
+
+/** frontend-spec §9.1 — tooltip reveal delay, ms. */
+export const tooltipDelay = 400;
+
+/** frontend-spec §13 — minimum touch target, px, both axes — including native. */
+export const touchTarget = 44;
+
+/** frontend-spec §11 — sheet backdrop, absolute on purpose: never inverts with theme. */
+export const sheetBackdrop = 'rgb(22 23 26/.32)';
+
 /** Surfaces, ink and agent inks, resolved per theme. */
 export const themes = {
   light: {

@@ -8,18 +8,23 @@
 import { agentInks } from '../agent-inks.js';
 import { WCAG_AA_NORMAL } from '../contrast.js';
 import { fontStacks } from '../fonts.js';
+import { sheetBackdrop, shimmerDuration, tooltipDelay, touchTarget } from '../interaction.js';
+import { breakpoint, container, shell } from '../layout.js';
 import { measure } from '../measure.js';
 import { colors } from '../palette.js';
 import { dur, ease, radius, shadow, space, z } from '../scales.js';
-import { typeScale } from '../type-scale.js';
+import { leadingInitial, typeScale } from '../type-scale.js';
 import { GENERATED_SOURCE, GENERATED_WARNING } from '../tokens.js';
 import type {
   AgentInkName,
+  Breakpoints,
+  Containers,
   FontStacks,
   Hex,
   Measure,
   SemanticColorName,
   SemanticColors,
+  ShellColumns,
   ThemeName,
   TypeScale,
   Voices,
@@ -52,6 +57,14 @@ export interface TokensJson {
   voices: Voices;
   weight: Weight;
   measure: Measure;
+  breakpoint: Breakpoints;
+  shell: ShellColumns;
+  container: Containers;
+  leadingInitial: number;
+  shimmerDuration: number;
+  tooltipDelay: number;
+  touchTarget: number;
+  sheetBackdrop: string;
 }
 
 function themeEntry(theme: ThemeName): TokensJsonTheme {
@@ -90,6 +103,14 @@ export function buildTokensJson(): TokensJson {
     voices,
     weight,
     measure,
+    breakpoint,
+    shell,
+    container,
+    leadingInitial,
+    shimmerDuration,
+    tooltipDelay,
+    touchTarget,
+    sheetBackdrop,
   };
 }
 

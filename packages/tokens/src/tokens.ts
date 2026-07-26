@@ -7,10 +7,12 @@
  */
 import { agentInks } from './agent-inks.js';
 import { fontStacks } from './fonts.js';
+import { sheetBackdrop, shimmerDuration, tooltipDelay, touchTarget } from './interaction.js';
+import { breakpoint, container, shell } from './layout.js';
 import { measure } from './measure.js';
 import { colors } from './palette.js';
 import { dur, ease, radius, shadow, space, z } from './scales.js';
-import { typeScale } from './type-scale.js';
+import { leadingInitial, typeScale } from './type-scale.js';
 import type {
   AgentInkName,
   Hex,
@@ -52,6 +54,14 @@ export const tokens = {
   voices,
   weight,
   measure,
+  breakpoint,
+  shell,
+  container,
+  leadingInitial,
+  shimmerDuration,
+  tooltipDelay,
+  touchTarget,
+  sheetBackdrop,
 } as const;
 
 /** `paperRaise` → `paper-raise`. Used for every emitted CSS custom property. */

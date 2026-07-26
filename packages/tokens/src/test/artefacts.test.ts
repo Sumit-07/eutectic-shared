@@ -11,9 +11,11 @@ import { test } from 'node:test';
 import { artefactUrl, artefacts } from '../artefacts.js';
 import { agentInks } from '../agent-inks.js';
 import { fontStacks } from '../fonts.js';
+import { sheetBackdrop, shimmerDuration, tooltipDelay, touchTarget } from '../interaction.js';
+import { breakpoint, shell } from '../layout.js';
 import { measure } from '../measure.js';
 import { colors } from '../palette.js';
-import { typeScale } from '../type-scale.js';
+import { leadingInitial, typeScale } from '../type-scale.js';
 import {
   agentInkNames,
   measureNames,
@@ -164,4 +166,111 @@ test('every new namespace (fonts, type scale, voices, weight, measure) reaches t
   for (const name of measureNames) {
     assert.ok(json.includes(`"${name}"`), `tokens.json lacks measure name ${name}`);
   }
+});
+
+// M0-SH-13 — the D-018 consolidation list: §7.2 breakpoints, §7.1 shell
+// columns, the container threshold, the FE-05 interaction literals and
+// §7.4's leading-initial. These retire apps/web's local-tokens block.
+
+test('breakpoints: defaults cleared, then 480/780/1180 as literals (query conditions cannot var())', async () => {
+  const css = await readFile(artefactUrl('generated/tokens.css'), 'utf8');
+  assert.deepEqual(breakpoint, { sm: 480, md: 780, lg: 1180 });
+  const reset = css.indexOf('--breakpoint-*: initial;');
+  assert.ok(reset >= 0, 'tokens.css must clear Tailwind’s default breakpoint scale');
+  for (const [name, px] of Object.entries(breakpoint)) {
+    const idx = css.indexOf(`--breakpoint-${name}: ${px}px;`);
+    assert.ok(idx > reset, `--breakpoint-${name} must be a literal, after the reset`);
+  }
+  assert.ok(!/--breakpoint-[a-z]+: var\(/.test(css), 'a breakpoint must never be a var() reference');
+  assert.match(css, /--container-eu-sm: 480px;/, 'the §7.2 container threshold must be a literal');
+  assert.ok(!/--container-eu-sm: var\(/.test(css), 'the container threshold must never be a var() reference');
+});
+
+test('shell columns: 236/300/720/640 vars and the four §7.1 utilities', async () => {
+  const css = await readFile(artefactUrl('generated/tokens.css'), 'utf8');
+  assert.deepEqual(shell, { railStart: 236, railEnd: 300, column: 720, columnPrivate: 640 });
+  assert.match(css, /--eu-shell-rail-start: 236px;/);
+  assert.match(css, /--eu-shell-rail-end: 300px;/);
+  assert.match(css, /--eu-shell-column: 720px;/);
+  assert.match(css, /--eu-shell-column-private: 640px;/);
+  assert.match(
+    css,
+    /@utility shell-grid-3 \{\n {2}grid-template-columns: var\(--eu-shell-rail-start\) minmax\(0, 1fr\) var\(--eu-shell-rail-end\);\n\}/,
+  );
+  assert.match(
+    css,
+    /@utility shell-grid-2 \{\n {2}grid-template-columns: var\(--eu-shell-rail-start\) minmax\(0, 1fr\);\n\}/,
+  );
+  // Logical properties, like `measure` (§1 "Always").
+  assert.match(css, /@utility shell-column \{\n {2}max-inline-size: var\(--eu-shell-column\);\n\}/);
+  assert.match(
+    css,
+    /@utility shell-column-private \{\n {2}max-inline-size: var\(--eu-shell-column-private\);\n\}/,
+  );
+});
+
+test('shimmer: 1.4s idle loop, opacity-only keyframes — never a gradient', async () => {
+  const css = await readFile(artefactUrl('generated/tokens.css'), 'utf8');
+  assert.equal(shimmerDuration, 1400);
+  assert.match(css, /--eu-shimmer-duration: 1\.4s;/);
+  assert.match(css, /--animate-shimmer: eu-shimmer var\(--eu-shimmer-duration\) linear infinite;/);
+  const keyframes = /@keyframes eu-shimmer \{[\s\S]*?\n {2}\}/.exec(css)?.[0] ?? '';
+  assert.notEqual(keyframes, '', 'tokens.css lacks @keyframes eu-shimmer');
+  assert.match(keyframes, /opacity: 1;/);
+  assert.match(keyframes, /opacity: 0\.5;/);
+  assert.ok(!/gradient/i.test(keyframes), 'shimmer keyframes must not animate a gradient');
+  assert.ok(!/background/.test(keyframes), 'shimmer keyframes must move opacity only');
+});
+
+test('sheet backdrop is §11’s absolute rgb, verbatim, and never theme-relative', async () => {
+  const css = await readFile(artefactUrl('generated/tokens.css'), 'utf8');
+  assert.equal(sheetBackdrop, 'rgb(22 23 26/.32)');
+  assert.match(css, /--eu-sheet-backdrop: rgb\(22 23 26\/\.32\);/);
+  assert.ok(
+    !/--eu-sheet-backdrop: (?:var|color-mix)\(/.test(css),
+    'the backdrop must not read ink — it would invert with the theme',
+  );
+  assert.match(css, /@utility sheet-backdrop \{\n {2}background-color: var\(--eu-sheet-backdrop\);\n\}/);
+});
+
+test('tooltip delay 400ms, touch target 44px logical both axes, block-lh 1lh', async () => {
+  const css = await readFile(artefactUrl('generated/tokens.css'), 'utf8');
+  assert.equal(tooltipDelay, 400);
+  assert.equal(touchTarget, 44);
+  assert.match(css, /--eu-tooltip-delay: 400ms;/);
+  assert.match(css, /@utility delay-tooltip \{\n {2}transition-delay: var\(--eu-tooltip-delay\);\n\}/);
+  assert.match(css, /--eu-touch-target: 44px;/);
+  assert.match(
+    css,
+    /@utility touch-target \{\n {2}min-inline-size: var\(--eu-touch-target\);\n {2}min-block-size: var\(--eu-touch-target\);\n\}/,
+  );
+  assert.match(css, /@utility block-lh \{\n {2}block-size: 1lh;\n\}/);
+});
+
+test('leading-initial is §7.4’s .85, mapped into Tailwind’s --leading-* namespace', async () => {
+  const css = await readFile(artefactUrl('generated/tokens.css'), 'utf8');
+  assert.equal(leadingInitial, 0.85);
+  assert.match(css, /--eu-leading-initial: 0\.85;/);
+  assert.match(css, /--leading-initial: var\(--eu-leading-initial\);/);
+});
+
+test('the SH-13 namespaces reach tokens.json and theme.ts', async () => {
+  const json = await readFile(artefactUrl('generated/tokens.json'), 'utf8');
+  const themeTs = await readFile(artefactUrl('generated/theme.ts'), 'utf8');
+  const parsed = JSON.parse(json) as Record<string, unknown>;
+  for (const key of [
+    'breakpoint',
+    'shell',
+    'container',
+    'leadingInitial',
+    'shimmerDuration',
+    'tooltipDelay',
+    'touchTarget',
+    'sheetBackdrop',
+  ]) {
+    assert.ok(key in parsed, `tokens.json lacks top-level "${key}"`);
+    assert.match(themeTs, new RegExp(`export const ${key}[ :=]`), `theme.ts lacks ${key}`);
+  }
+  assert.equal(parsed.leadingInitial, 0.85);
+  assert.equal(parsed.touchTarget, 44);
 });

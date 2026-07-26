@@ -5,6 +5,14 @@
  */
 import type { TypeScale } from './types.js';
 
+/**
+ * frontend-spec §7.4 — "initial … lineHeight .85". The gutter initial's
+ * leading, the one sanctioned value below 1: it exists so the initial's cap
+ * height, not its line box, does the optical alignment §1 "Always" asks for.
+ * Unitless multiplier, like every lineHeight in this file.
+ */
+export const leadingInitial = 0.85;
+
 export const typeScale = {
   display: { size: 40, lineHeight: 1.1, face: 'prose' },
   title: { size: 27, lineHeight: 1.2, face: 'prose' },
