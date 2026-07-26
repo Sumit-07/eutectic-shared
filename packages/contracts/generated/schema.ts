@@ -403,7 +403,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        ErrorCode: "bad_request" | "unauthorized" | "forbidden" | "not_found" | "not_acceptable" | "idempotency_conflict" | "unprocessable" | "rate_limited" | "internal";
+        ErrorCode: "bad_request" | "unauthorized" | "forbidden" | "not_found" | "not_acceptable" | "idempotency_conflict" | "unprocessable" | "rate_limited" | "not_implemented" | "internal";
         ErrorDetail: {
             field: string;
             /** @description Machine-readable reason, e.g. `word_count`, `too_many_tags`. */
