@@ -1,0 +1,185 @@
+/*
+ * GENERATED FILE — do not edit. Run `pnpm --filter @eutectic/tokens build`.
+ * Source: packages/tokens/src/*.ts (frontend-spec.md §5)
+ */
+
+/* frontend-spec §4.2 — cascade layer order. */
+@layer reset, tokens, base, components, utilities;
+
+@layer tokens {
+  :root {
+    /* frontend-spec §5.4 — space (px) */
+    --eu-space-1: 2px;
+    --eu-space-2: 4px;
+    --eu-space-3: 8px;
+    --eu-space-4: 12px;
+    --eu-space-5: 16px;
+    --eu-space-6: 20px;
+    --eu-space-7: 24px;
+    --eu-space-8: 32px;
+    --eu-space-9: 40px;
+    --eu-space-10: 56px;
+    --eu-space-11: 80px;
+
+    /* radius (px) */
+    --eu-radius-none: 0px;
+    --eu-radius-sm: 2px;
+    --eu-radius-md: 3px;
+    --eu-radius-full: 999px;
+
+    /* shadow */
+    --eu-shadow-sheet: 0 1px 2px rgb(22 23 26/.04), 0 8px 24px rgb(22 23 26/.08);
+    --eu-shadow-pop: 0 1px 2px rgb(22 23 26/.05), 0 4px 12px rgb(22 23 26/.07);
+    --eu-shadow-inset: inset 0 1px 0 rgb(22 23 26/.03);
+
+    /* z */
+    --eu-z-sticky: 10;
+    --eu-z-pill: 20;
+    --eu-z-sheet: 40;
+    --eu-z-toast: 50;
+
+    /* motion — ms, nothing longer than dur-3; no springs */
+    --eu-dur-1: 120ms;
+    --eu-dur-2: 180ms;
+    --eu-dur-3: 280ms;
+    --eu-ease-out: cubic-bezier(.2,.8,.3,1);
+    --eu-ease-in-out: cubic-bezier(.5,0,.3,1);
+  }
+
+  :root,
+  [data-theme='light'] {
+    color-scheme: light;
+
+    /* frontend-spec §5.1 / §5.3 — surfaces and ink */
+    --eu-paper: #FCFCFA;
+    --eu-paper-raise: #FFFFFF;
+    --eu-paper-sink: #F4F4F1;
+    --eu-paper-hover: #F8F8F5;
+    --eu-rule: #E4E4DF;
+    --eu-rule-strong: #CECEC7;
+    --eu-rule-soft: #EFEFEA;
+    --eu-ink: #16171A;
+    --eu-ink-soft: #4A4C52;
+    --eu-ink-quiet: #6F7178;
+    --eu-ink-faint: #9B9DA4;
+    --eu-positive: #2F6E38;
+    --eu-negative: #A2374C;
+    --eu-caution: #8A5A12;
+    --eu-focus: #33489E;
+
+    /* frontend-spec §5.2 — agent inks, addressed by token name */
+    --eu-agent-bricklayer: #A9660F;
+    --eu-agent-ledger: #17697E;
+    --eu-agent-marguerite: #6B3FA0;
+    --eu-agent-sprout: #3F7A34;
+    --eu-agent-grouse: #A2374C;
+    --eu-agent-vellum: #33489E;
+    --eu-agent-neutral: #6F7178;
+  }
+
+  [data-theme='dark'] {
+    color-scheme: dark;
+
+    /* frontend-spec §5.1 / §5.3 — surfaces and ink */
+    --eu-paper: #0F0F11;
+    --eu-paper-raise: #17171A;
+    --eu-paper-sink: #141417;
+    --eu-paper-hover: #131316;
+    --eu-rule: #232327;
+    --eu-rule-strong: #33333A;
+    --eu-rule-soft: #1C1C20;
+    --eu-ink: #EDEAE3;
+    --eu-ink-soft: #C3C1BB;
+    --eu-ink-quiet: #83838D;
+    --eu-ink-faint: #5A5A63;
+    --eu-positive: #6FA85F;
+    --eu-negative: #CE7D8E;
+    --eu-caution: #D9A34E;
+    --eu-focus: #8296D6;
+
+    /* frontend-spec §5.2 — agent inks, addressed by token name */
+    --eu-agent-bricklayer: #E4A159;
+    --eu-agent-ledger: #5FB2C6;
+    --eu-agent-marguerite: #B48CD6;
+    --eu-agent-sprout: #8CC183;
+    --eu-agent-grouse: #CE7D8E;
+    --eu-agent-vellum: #8296D6;
+    --eu-agent-neutral: #83838D;
+  }
+}
+
+/* Tailwind v4 binding. `inline` keeps the var reference in the utility. */
+@theme inline {
+  /* colours — utilities follow [data-theme] through the var */
+  --color-paper: var(--eu-paper);
+  --color-paper-raise: var(--eu-paper-raise);
+  --color-paper-sink: var(--eu-paper-sink);
+  --color-paper-hover: var(--eu-paper-hover);
+  --color-rule: var(--eu-rule);
+  --color-rule-strong: var(--eu-rule-strong);
+  --color-rule-soft: var(--eu-rule-soft);
+  --color-ink: var(--eu-ink);
+  --color-ink-soft: var(--eu-ink-soft);
+  --color-ink-quiet: var(--eu-ink-quiet);
+  --color-ink-faint: var(--eu-ink-faint);
+  --color-positive: var(--eu-positive);
+  --color-negative: var(--eu-negative);
+  --color-caution: var(--eu-caution);
+  --color-focus: var(--eu-focus);
+  --color-agent-bricklayer: var(--eu-agent-bricklayer);
+  --color-agent-ledger: var(--eu-agent-ledger);
+  --color-agent-marguerite: var(--eu-agent-marguerite);
+  --color-agent-sprout: var(--eu-agent-sprout);
+  --color-agent-grouse: var(--eu-agent-grouse);
+  --color-agent-vellum: var(--eu-agent-vellum);
+  --color-agent-neutral: var(--eu-agent-neutral);
+
+  /* spacing — p-4, gap-4, m-4 … resolve to the §5.4 scale */
+  --spacing-1: var(--eu-space-1);
+  --spacing-2: var(--eu-space-2);
+  --spacing-3: var(--eu-space-3);
+  --spacing-4: var(--eu-space-4);
+  --spacing-5: var(--eu-space-5);
+  --spacing-6: var(--eu-space-6);
+  --spacing-7: var(--eu-space-7);
+  --spacing-8: var(--eu-space-8);
+  --spacing-9: var(--eu-space-9);
+  --spacing-10: var(--eu-space-10);
+  --spacing-11: var(--eu-space-11);
+
+  --radius-none: var(--eu-radius-none);
+  --radius-sm: var(--eu-radius-sm);
+  --radius-md: var(--eu-radius-md);
+  --radius-full: var(--eu-radius-full);
+
+  --shadow-sheet: var(--eu-shadow-sheet);
+  --shadow-pop: var(--eu-shadow-pop);
+  --shadow-inset: var(--eu-shadow-inset);
+
+  --ease-out: var(--eu-ease-out);
+  --ease-in-out: var(--eu-ease-in-out);
+}
+
+/* Tailwind has no z-index or duration theme namespace. These exist so §5.4
+   is reachable without an arbitrary value (CLAUDE.md rule 2). */
+@utility z-sticky {
+  z-index: var(--eu-z-sticky);
+}
+@utility z-pill {
+  z-index: var(--eu-z-pill);
+}
+@utility z-sheet {
+  z-index: var(--eu-z-sheet);
+}
+@utility z-toast {
+  z-index: var(--eu-z-toast);
+}
+@utility dur-1 {
+  transition-duration: var(--eu-dur-1);
+}
+@utility dur-2 {
+  transition-duration: var(--eu-dur-2);
+}
+@utility dur-3 {
+  transition-duration: var(--eu-dur-3);
+}

@@ -5,10 +5,26 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./tokens.css": "./generated/tokens.css",
+    "./theme": "./generated/theme.ts",
+    "./tokens.json": "./generated/tokens.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "generated"
+  ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node dist/build.js && node dist/scripts/check-contrast.js",
+    "emit": "tsc -p tsconfig.json && node dist/build.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "echo \"lint: no rules configured yet (M0-SH-01 stub)\"",
-    "test": "echo \"test: no tests yet (M0-SH-01 stub)\""
+    "lint": "echo \"lint: no rules configured yet (M0-SH-05)\"",
+    "test": "tsc -p tsconfig.json && node --test dist/test/*.test.js",
+    "check:contrast": "tsc -p tsconfig.json && node dist/scripts/check-contrast.js"
   }
 }
