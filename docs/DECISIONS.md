@@ -6,6 +6,18 @@ Format: `D-NNN · date · who · decision · why · what it forecloses`.
 
 ---
 
+## D-026 · 2026-07-27 · Fable · Ratchets are per-platform: the /probe CLS ratchet re-baselines to 0.05 on Linux (same tracked defect, honestly measured), and "only tighten" resumes from there
+
+**Decision.** FE-14 put the gates on Linux for the first time (D-009: no gate had ever executed there) and the /probe CLS gate went red: deterministic bimodal 0.04938935… (four runs, four VMs, byte-identical float) or 0 when the font wins the race. Verified mechanism, same defect D-020 ratcheted at 0.026 on macOS: webfont swap reflow — the prose fallbacks (Georgia/Iowan Old Style) don't exist on Linux, fontconfig substitutes DejaVu/Liberation metrics, the swap moves more pixels. Every other Linux number is inside budget (LCP / 2138ms vs 2300; framework 102.0/102; CLS /probe/entry ≈ 0).
+
+**Ruling: Option A — ratchet becomes 0.05, recorded as the Linux measurement of the same tracked defect, not a waiver.** Principle now standing: **a ratchet is a measurement, and a measurement is tied to the platform it was taken on.** When the measuring platform changes, the ratchet re-baselines to an honest measurement on the new platform, then "may only tighten" (D-020) resumes per-platform. 0.026 described a platform CI no longer runs on. Known residual risks, accepted and recorded: headroom above the deterministic value is ~0.0006 (tight is good), and the one-in-five 0-runs mean a regression can hide under a lucky race — a bimodality that exists at any threshold and is eliminated only by the real fix.
+
+**The real fix is human-gated and now scheduled, not just noted:** eliminating the swap reflow (`display: 'optional'` vs tuned size-adjusted fallbacks) is a §6.1 product-behavior/taste choice — it joins the existing font-strategy item (D-020: kerning + CLS, ONE item) on the human's list, and the ticket that implements the chosen strategy MUST tighten this ratchet to ≤0.005 in the same PR. That converts the tracked breach into scheduled work with a measurable exit.
+
+Also ratified from the FE-14 review so far: the explicit shared-packages build step as the sanctioned D-025 alternative; visual.spec.ts's skip retired into a hard throw; the regenerate-baselines job's missing web build caught by CTO-FE diagnostics (ruling-independent fix). CLS-gate red proof satisfied by the three diagnostic runs.
+
+**Forecloses.** Treating a platform re-baseline as precedent for loosening a ratchet on an unchanged platform; shipping the font-strategy fix without tightening this ratchet in the same PR; cross-platform comparison of ratchet values as if they measured the same thing.
+
 ## D-025 · 2026-07-27 · Fable · M0-BE-24 accepted: backend CI is real; the D-023 protocol ran end-to-end; serialization over isolation for the test step
 
 **Decision.** M0-BE-24 merged (eutectic-backend develop @ 9e918a5, PR #22). Backend CI now reconstructs the workspace per D-022, runs all 13 migrations against a fresh postgres:16, backs cache/api integration suites with a real redis:7 (never mocked around), and runs build/typecheck/test filtered to backend packages — the rule-9 premium-neutrality guard and the worker suite now run in CI. Green on branch (run 30223716226), on develop (30223925048), and the D-023 superseding dispatch on shared develop (30223955727) closed the lockstep window green.
