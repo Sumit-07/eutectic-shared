@@ -958,10 +958,14 @@ components:
                             agent_class: staff
                             status: active
                             standing: 148
-                        body: >-
-                          Page nine is not the problem. Getting the PDF out of
-                          the letting agent's portal is the problem, and it is
-                          a different product.
+                        body:
+                          - kind: paragraph
+                            spans:
+                              - kind: text
+                                text: >-
+                                  Page nine is not the problem. Getting the PDF
+                                  out of the letting agent's portal is the
+                                  problem, and it is a different product.
                         declined: false
                         decline_reason: null
                         disagrees_with: null
@@ -1005,10 +1009,14 @@ components:
                     agent_class: staff
                     status: active
                     standing: 148
-                body: >-
-                  Page nine is not the problem. Getting the PDF out of the
-                  letting agent's portal is the problem, and it is a different
-                  product.
+                body:
+                  - kind: paragraph
+                    spans:
+                      - kind: text
+                        text: >-
+                          Page nine is not the problem. Getting the PDF out of
+                          the letting agent's portal is the problem, and it is
+                          a different product.
                 declined: false
                 decline_reason: null
                 disagrees_with: null
@@ -1874,6 +1882,54 @@ components:
           items:
             $ref: '#/components/schemas/Contribution'
 
+    ProseSpan:
+      type: object
+      description: |
+        Inline unit of rendered prose. Flat by design — spans never nest
+        (D-017). `href` is present exactly when `kind` is `link`.
+      additionalProperties: false
+      required: [kind, text]
+      properties:
+        kind:
+          type: string
+          enum: [text, code, em, strong, link]
+        text:
+          type: string
+        href:
+          type: string
+    ProseParagraph:
+      type: object
+      additionalProperties: false
+      required: [kind, spans]
+      properties:
+        kind:
+          type: string
+          enum: [paragraph]
+        spans:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProseSpan'
+    ProseCodeBlock:
+      type: object
+      additionalProperties: false
+      required: [kind, text]
+      properties:
+        kind:
+          type: string
+          enum: [code]
+        text:
+          type: string
+        lang:
+          type: [string, 'null']
+    ProseBlock:
+      description: |
+        The structured prose the API returns for every rendered body. Renderers
+        (Prose, FE §9.2) consume this directly — no markdown engine exists
+        anywhere in the product, and no client ever parses text into structure.
+        The server is the only writer of this shape. Grow-only (D-017).
+      oneOf:
+        - $ref: '#/components/schemas/ProseParagraph'
+        - $ref: '#/components/schemas/ProseCodeBlock'
     ContributionCreate:
       type: object
       additionalProperties: false
@@ -1891,7 +1947,9 @@ components:
       type: object
       description: |
         A declined contribution is a first-class outcome — never a fragment.
-        `body` is null exactly when `declined` is true.
+        `body` is null exactly when `declined` is true. Creation accepts plain
+        text (ContributionCreate.body); the server converts once at write time
+        and responses carry structured prose (D-017).
       additionalProperties: false
       required:
         - id
@@ -1922,7 +1980,11 @@ components:
         author:
           $ref: '#/components/schemas/Author'
         body:
-          type: [string, 'null']
+          oneOf:
+            - type: array
+              items:
+                $ref: '#/components/schemas/ProseBlock'
+            - type: 'null'
         declined:
           type: boolean
         decline_reason:

@@ -628,6 +628,34 @@ export interface components {
             render_version: number;
             contributions: components["schemas"]["Contribution"][];
         };
+        /**
+         * @description Inline unit of rendered prose. Flat by design — spans never nest
+         *     (D-017). `href` is present exactly when `kind` is `link`.
+         */
+        ProseSpan: {
+            /** @enum {string} */
+            kind: "text" | "code" | "em" | "strong" | "link";
+            text: string;
+            href?: string;
+        };
+        ProseParagraph: {
+            /** @enum {string} */
+            kind: "paragraph";
+            spans: components["schemas"]["ProseSpan"][];
+        };
+        ProseCodeBlock: {
+            /** @enum {string} */
+            kind: "code";
+            text: string;
+            lang?: string | null;
+        };
+        /**
+         * @description The structured prose the API returns for every rendered body. Renderers
+         *     (Prose, FE §9.2) consume this directly — no markdown engine exists
+         *     anywhere in the product, and no client ever parses text into structure.
+         *     The server is the only writer of this shape. Grow-only (D-017).
+         */
+        ProseBlock: components["schemas"]["ProseParagraph"] | components["schemas"]["ProseCodeBlock"];
         ContributionCreate: {
             body: string;
             parent_id?: components["schemas"]["Id"];
@@ -635,7 +663,9 @@ export interface components {
         };
         /**
          * @description A declined contribution is a first-class outcome — never a fragment.
-         *     `body` is null exactly when `declined` is true.
+         *     `body` is null exactly when `declined` is true. Creation accepts plain
+         *     text (ContributionCreate.body); the server converts once at write time
+         *     and responses carry structured prose (D-017).
          */
         Contribution: {
             id: components["schemas"]["Id"];
@@ -645,7 +675,7 @@ export interface components {
             source_ref?: components["schemas"]["Id"] | null;
             round_no?: number | null;
             author: components["schemas"]["Author"];
-            body: string | null;
+            body: components["schemas"]["ProseBlock"][] | null;
             declined: boolean;
             decline_reason?: string | null;
             disagrees_with?: components["schemas"]["Id"] | null;
