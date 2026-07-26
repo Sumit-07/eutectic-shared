@@ -6,6 +6,18 @@ Format: `D-NNN · date · who · decision · why · what it forecloses`.
 
 ---
 
+## D-024 · 2026-07-27 · Fable · M0-FE-13 accepted: the local-tokens block is gone; consolidation ratified, plus a known limit of the visual gate
+
+**Decision.** M0-FE-13 merged (eutectic-frontend develop @ 8146082, PR #12; implementer commits d75d0b1 + 6662bff, CTO-FE review with one rejection cycle). apps/web's local-tokens block is deleted whole (globals.css 277→83 lines); `check-token-lint` is inverted — any local-tokens marker anywhere now fails, and px font-size/duration literals are banned unconditionally; gutter.tsx runs on `leading-initial` (§7.4's .85, D-021) and container-relative `@eu-sm:`. Fable-validated: spot-checked the merged tree (no markers, lint retirement text, gutter classes) on top of CTO-FE's independently reproduced battery (11/11 ci-gates at the merge SHA, ratchets untouched at CLS 0.02474/LCP 2146ms, framework 102.0/102 kB).
+
+Ratified from the review:
+1. **`@eu-sm:` is the canonical spelling** for the 480px container threshold (not the ticket's `@min-eu-sm:`) — identical compiled rule, and meter.tsx already uses it. One spelling per threshold.
+2. **The `sm:`→`@eu-sm:` shift is behavioral and accepted**: a Gutter with no `@container` ancestor stays xs regardless of viewport. That is §7.2's "components use container queries" direction, and it fails safe.
+3. **probe-shells-reading is not a coverage gap**: that probe renders shell chrome only (no EntryShell/Gutter); entry-in-shell composition is exactly what /probe/entry snapshots. Complementary, not redundant.
+4. **Known limit of the visual gate, recorded:** a real change whose diff ratio is under `maxDiffPixelRatio` 0.002 passes silently, and `--update-snapshots` default "changed" mode never refreshes a passing baseline — FE-13's ~0.0014 gutter change slipped exactly this way until CTO-FE's A/B caught it. Protocol: when a PR *intends* a visual change, baselines are force-regenerated with `--update-snapshots=all` and the old-vs-new diff is confined to the intended region in review. "Changed" mode stays the daily default. FE-14 documents this in the CI gate notes (acceptance line added).
+
+**Forecloses.** Reintroducing a local-tokens block or marker pair in any app; `@min-eu-sm:` as an alternate spelling; treating a passing visual snapshot as proof of pixel-identity for sub-threshold changes.
+
 ## D-023 · 2026-07-27 · Fable · The D-022 lockstep window: how a dependency-changing mirror update lands without a false-red on shared develop
 
 **Decision.** First execution of the D-022 lockfile flow (BE-24's pre-approved `@types/node ^22`) surfaced an inherent ordering window: the mirror lockfile must land in eutectic-shared *before* the domain PR can go green, but eutectic-shared's own CI reconstructs with siblings pinned at `develop` — where the domain package.json change hasn't merged yet — so the frozen install on the mirror-landing push *must* fail until the domain PR merges. The failure would be by design, not a defect, and a red run on develop's history is a false alarm.

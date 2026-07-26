@@ -783,6 +783,10 @@ ACCEPTANCE
   - Ratchets unchanged (CLS 0.026 on /probe, LCP 2300ms on /, framework
     baseline 102KB): CI must reproduce the same numbers class, not relax them
   - .gitignore: drop trailing slashes on directory patterns (D-018 hazard)
+  - Gate notes document the visual gate's known limit (D-024 item 4): real
+    changes under maxDiffPixelRatio 0.002 pass silently and default
+    --update-snapshots "changed" mode keeps stale baselines; intended visual
+    changes force-regenerate with --update-snapshots=all
   - Every gate proven RED once in the PR body
-DEPENDS ON M0-SH-05 (done), M0-FE-13
+DEPENDS ON M0-SH-05 (done), M0-FE-13 (done, 8146082)
 ```
