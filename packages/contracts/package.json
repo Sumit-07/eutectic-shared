@@ -3,12 +3,37 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    },
+    "./client": {
+      "types": "./dist/generated/client.d.ts",
+      "default": "./dist/generated/client.js"
+    },
+    "./server": {
+      "types": "./dist/generated/server-types.d.ts",
+      "default": "./dist/generated/server-types.js"
+    },
+    "./openapi.yaml": "./openapi.yaml"
+  },
+  "files": [
+    "dist",
+    "openapi.yaml"
+  ],
   "scripts": {
+    "generate": "node scripts/generate.mjs",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "echo \"lint: no rules configured yet (M0-SH-01 stub)\"",
-    "test": "echo \"test: no tests yet (M0-SH-01 stub)\""
+    "lint": "echo \"lint: no rules configured yet (M0-SH-05)\"",
+    "pretest": "pnpm run build",
+    "test": "node --test \"test/*.test.mjs\"",
+    "mock": "npx -y @stoplight/prism-cli@5 mock ./openapi.yaml --host 127.0.0.1 --port 4010"
+  },
+  "devDependencies": {
+    "openapi-typescript": "7.13.0"
   }
 }
