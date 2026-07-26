@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eutectic — Board</title>
+<!--
+  FABLE: this is the board. You are the only writer.
+  Edit the TICKETS array at the bottom of this file. Nothing else.
+  Move a card by changing its `state`. Record the date it entered that state
+  in `since` (YYYY-MM-DD) so age-in-state is accurate.
+  States: todo | doing | review | validation | done | blocked | decision
+  Lanes:  frontend | backend | shared | infra
+-->
+<style>
+  :root{
+    --paper:#FCFCFA; --paper-sink:#F4F4F1; --paper-raise:#FFF;
+    --rule:#E4E4DF; --rule-soft:#EFEFEA; --rule-strong:#CECEC7;
+    --ink:#16171A; --ink-soft:#4A4C52; --ink-quiet:#6F7178; --ink-faint:#9B9DA4;
+    --positive:#2F6E38; --negative:#A2374C; --caution:#8A5A12; --focus:#33489E;
+    --lane-frontend:#6B3FA0; --lane-backend:#17697E;
+    --lane-shared:#A9660F;   --lane-infra:#3F7A34;
+    --sans:'Instrument Sans',ui-sans-serif,system-ui,sans-serif;
+    --serif:Newsreader,Georgia,serif;
+    --mono:'Commit Mono',ui-monospace,'IBM Plex Mono',monospace;
+  }
+  [data-theme="dark"]{
+    --paper:#0F0F11; --paper-sink:#141417; --paper-raise:#17171A;
+    --rule:#232327; --rule-soft:#1C1C20; --rule-strong:#33333A;
+    --ink:#EDEAE3; --ink-soft:#C3C1BB; --ink-quiet:#83838D; --ink-faint:#5A5A63;
+    --positive:#6FA85F; --negative:#CE7D8E; --caution:#D9A34E; --focus:#8296D6;
+    --lane-frontend:#B48CD6; --lane-backend:#5FB2C6;
+    --lane-shared:#E4A159;   --lane-infra:#8CC183;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  header{display:flex;align-items:baseline;gap:16px;padding:20px 24px;border-bottom:1px solid var(--rule);position:sticky;top:0;background:var(--paper);z-index:5;flex-wrap:wrap}
+  h1{margin:0;font-family:var(--serif);font-size:21px;font-weight:400;letter-spacing:-.2px}
+  .milestone{font-family:var(--mono);font-size:11px;color:var(--ink-quiet);border:1px solid var(--rule);padding:1px 7px}
+  .counts{margin-left:auto;display:flex;gap:14px;font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
+  .counts b{color:var(--ink-soft);font-weight:600;font-variant-numeric:tabular-nums}
+  .controls{display:flex;gap:8px;align-items:center}
+  button,select{font-family:inherit;font-size:12px;background:none;border:1px solid var(--rule);color:var(--ink-soft);padding:3px 9px;border-radius:2px;cursor:pointer}
+  button:hover,select:hover{border-color:var(--ink-faint);color:var(--ink)}
+  :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+  .board{display:grid;grid-template-columns:repeat(7,minmax(190px,1fr));gap:0;overflow-x:auto}
+  .col{border-right:1px solid var(--rule);min-height:70vh}
+  .col:last-child{border-right:0}
+  .colhead{position:sticky;top:10px;background:var(--paper);padding:10px 12px;border-bottom:5px solid var(--rule);display:flex;justify-content:space-between;align-items:baseline;gap:8px;z-index:4}
+  .colname{font-size:12px;font-weight:600}
+  .coln{font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);font-variant-numeric:tabular-nums}
+  .col[data-state="decision"] .colname{color:var(--negative)}
+  .col[data-state="blocked"] .colname{color:var(--caution)}
+  .stack{padding:8px}
+
+  .card{border:1px solid var(--rule);border-left-width:2px;background:var(--paper-raise);padding:9px 10px;margin-bottom:7px;border-radius:2px}
+  .card:hover{border-color:var(--rule-strong)}
+  .card[data-lane="frontend"]{border-left-color:var(--lane-frontend)}
+  .card[data-lane="backend"]{border-left-color:var(--lane-backend)}
+  .card[data-lane="shared"]{border-left-color:var(--lane-shared)}
+  .card[data-lane="infra"]{border-left-color:var(--lane-infra)}
+  .cid{font-family:var(--mono);font-size:10px;color:var(--ink-faint);display:flex;justify-content:space-between;gap:6px}
+  .age{font-variant-numeric:tabular-nums}
+  .age.warn{color:var(--caution)}
+  .age.bad{color:var(--negative);font-weight:600}
+  .ctitle{margin:3px 0 6px;font-size:12.5px;line-height:1.35}
+  .cmeta{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+  .tag{font-family:var(--mono);font-size:9.5px;color:var(--ink-quiet);border:1px solid var(--rule);padding:0 5px;border-radius:2px}
+  .tag.spec{color:var(--ink-faint)}
+  .tag.shared{color:var(--lane-shared);border-color:var(--lane-shared)}
+  .tag.risk{color:var(--negative);border-color:var(--negative)}
+  .tag.owner{color:var(--ink-soft)}
+  .empty{color:var(--ink-faint);font-size:11.5px;padding:12px;font-family:var(--serif);font-style:italic}
+  footer{padding:14px 24px;border-top:1px solid var(--rule);color:var(--ink-faint);font-size:11px}
+  @media (max-width:900px){ .board{grid-template-columns:repeat(7,minmax(180px,1fr))} }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Eutectic</h1>
+  <span class="milestone" id="ms">M0 — Foundations</span>
+  <div class="controls">
+    <select id="lane" aria-label="Filter by lane">
+      <option value="">All lanes</option>
+      <option value="frontend">Frontend</option>
+      <option value="backend">Backend</option>
+      <option value="shared">Shared</option>
+      <option value="infra">Infra</option>
+    </select>
+    <button id="theme" aria-label="Toggle theme">Theme</button>
+  </div>
+  <div class="counts" id="counts"></div>
+</header>
+
+<main class="board" id="board"></main>
+
+<footer>
+  Cards move left to right. <strong>Blocked</strong> and <strong>Needs your call</strong> are
+  surfaced weekly. Anything over 3 days in either is escalated.
+</footer>
+
+<script>
+const STATES = [
+  ['todo',       'To-do'],
+  ['doing',      'In-Progress'],
+  ['review',     'In-Review'],
+  ['validation', 'Validation'],
+  ['done',       'Done'],
+  ['blocked',    'Blocked'],
+  ['decision',   'Needs your call']
+];
+
+const MILESTONE = 'M0 — Foundations';
+
+/* ─────────────────────────────────────────────────────────────
+   FABLE: edit only below this line.
+   state: todo|doing|review|validation|done|blocked|decision
+   lane:  frontend|backend|shared|infra
+   since: YYYY-MM-DD  — the date the card entered its current state
+   ───────────────────────────────────────────────────────────── */
+const TICKETS = [
+  { id:'M0-SH-01', title:'Workspace scaffold: three repos, pnpm workspace, Turborepo, CODEOWNERS',
+    lane:'shared', state:'done', since:'2026-07-26', spec:'OM §3, D-004', owner:'Fable', shared:true },
+
+  { id:'M0-SH-02', title:'packages/tokens — light + dark + six inks, emits css/ts/json',
+    lane:'shared', state:'done', since:'2026-07-26', spec:'FE §5, D-010', owner:'Fable', shared:true },
+
+  { id:'M0-SH-03', title:'packages/contracts — OpenAPI v1 skeleton + codegen',
+    lane:'shared', state:'done', since:'2026-07-26', spec:'SD §9', owner:'Fable', shared:true },
+
+  { id:'M0-BE-01', title:'packages/db — Drizzle, pool, migration runner, seed',
+    lane:'backend', state:'done', since:'2026-07-26', spec:'SD §5', owner:'CTO-BE' },
+
+  { id:'M0-FE-01', title:'Next.js scaffold, App Router, Tailwind v4 consuming tokens',
+    lane:'frontend', state:'done', since:'2026-07-26', spec:'FE §4, D-012', owner:'CTO-FE' },
+
+  /* Backend wave 2 — gated on the first five tickets merging (impl-plan §11) */
+  { id:'M0-BE-02', title:'0001 — users, sessions, entitlements',
+    lane:'backend', state:'done', since:'2026-07-26', spec:'SD §5 §11, D-011', owner:'CTO-BE' },
+  { id:'M0-BE-03', title:'0002 — agents, affinities, budgets, tokens↯, liveness↯',
+    lane:'backend', state:'done', since:'2026-07-26', spec:'SD §1 §5', owner:'CTO-BE' },
+  { id:'M0-BE-04', title:'0003 — forums, tags, posts, post_tags + GIN',
+    lane:'backend', state:'done', since:'2026-07-26', spec:'SD §5 §8', owner:'CTO-BE' },
+  { id:'M0-BE-05', title:'0004 — threads, chapters, contributions (central seam)',
+    lane:'backend', state:'done', since:'2026-07-26', spec:'SD §1 §5', owner:'CTO-BE', risk:true },
+  { id:'M0-BE-06', title:'0005 — calls, checkpoints, calibration',
+    lane:'backend', state:'done', since:'2026-07-26', spec:'SD §5 §14', owner:'CTO-BE' },
+  { id:'M0-BE-07', title:'0006 — votes, counters, follows, diaries',
+    lane:'backend', state:'done', since:'2026-07-26', spec:'SD §5', owner:'CTO-BE' },
+  { id:'M0-BE-08', title:'0007 — arguments ↯ + tags.slug trgm index',
+    lane:'backend', state:'done', since:'2026-07-27', spec:'SD §5 §8, D-013', owner:'CTO-BE' },
+  { id:'M0-BE-09', title:'0008 — grants, repos, reviews, products, findings… ↯',
+    lane:'backend', state:'done', since:'2026-07-27', spec:'SD §1 §5', owner:'CTO-BE' },
+  { id:'M0-BE-10', title:'0009 — Bell island tables ↯',
+    lane:'backend', state:'done', since:'2026-07-27', spec:'SD §5', owner:'CTO-BE', risk:true },
+  { id:'M0-BE-11', title:'0010 — ledgers, auctions, proposals, moderation ↯',
+    lane:'backend', state:'done', since:'2026-07-27', spec:'SD §1 §5', owner:'CTO-BE' },
+  { id:'M0-BE-12', title:'0011 — events (partitioned) + feed_entries + indexes',
+    lane:'backend', state:'done', since:'2026-07-27', spec:'SD §4 §5', owner:'CTO-BE', risk:true },
+  { id:'M0-BE-13', title:'packages/events — writer + frozen TS event catalogue',
+    lane:'backend', state:'done', since:'2026-07-27', spec:'SD §4', owner:'CTO-BE', risk:true },
+  { id:'M0-BE-14', title:'withJob transactional enqueue + worker bootstrap',
+    lane:'backend', state:'done', since:'2026-07-27', spec:'SD §3', owner:'CTO-BE', risk:true },
+  { id:'M0-BE-15', title:'Fastify app — OpenAPI binding, error envelope, request id, Accept',
+    lane:'backend', state:'done', since:'2026-07-27', spec:'SD §2 §9', owner:'CTO-BE', risk:true },
+  { id:'M0-BE-16', title:'Idempotency middleware — Idempotency-Key on all mutations',
+    lane:'backend', state:'done', since:'2026-07-27', spec:'SD §3', owner:'CTO-BE', risk:true },
+  { id:'M0-BE-17', title:'GitHub OAuth, session cookie, tier computation',
+    lane:'backend', state:'blocked', since:'2026-07-27', spec:'SD §11', owner:'CTO-BE', risk:true },
+  { id:'M0-BE-18', title:'Entitlement resolution + session caching',
+    lane:'backend', state:'done', since:'2026-07-27', spec:'SD §5 §6 §11', owner:'CTO-BE', risk:true },
+  { id:'M0-BE-19', title:'Redis — cache helper, counters, rate limiter',
+    lane:'backend', state:'done', since:'2026-07-27', spec:'SD §6', owner:'CTO-BE' },
+  { id:'M0-BE-20', title:'OTel tracing, structured logs, health endpoints',
+    lane:'backend', state:'done', since:'2026-07-27', spec:'SD §13', owner:'CTO-BE' },
+  { id:'M0-BE-22', title:'Debt — events test helper sql.json fix (D-016)',
+    lane:'backend', state:'done', since:'2026-07-27', spec:'D-016', owner:'CTO-BE' },
+
+    { id:'M0-FE-05', title:'Primitives — Meter, Skeleton, Sheet, Toast, Tooltip',
+    lane:'frontend', state:'done', since:'2026-07-27', spec:'FE §9.1 §12', owner:'CTO-FE' },
+  { id:'M0-FE-06', title:'Entry system — EntryShell, Gutter, Byline, Prose, Cites',
+    lane:'frontend', state:'done', since:'2026-07-27', spec:'FE §9.2 §7.4', owner:'CTO-FE', risk:true },
+  { id:'M0-FE-07', title:'Storybook — every component, every state, both themes',
+    lane:'frontend', state:'done', since:'2026-07-27', spec:'FE §9', owner:'CTO-FE' },
+  { id:'M0-FE-08', title:'Generated client + TanStack Query + Prism mock',
+    lane:'frontend', state:'done', since:'2026-07-27', spec:'FE §4.1 §4.4', owner:'CTO-FE', risk:true },
+  { id:'M0-FE-09', title:'Theme resolution server-side, no flash',
+    lane:'frontend', state:'done', since:'2026-07-27', spec:'FE §5.3 §16', owner:'CTO-FE' },
+  { id:'M0-FE-10', title:'CI — the ten §19 gates',
+    lane:'frontend', state:'done', since:'2026-07-27', spec:'FE §19, D-019', owner:'CTO-FE', risk:true },
+  { id:'M0-FE-12', title:'apps/admin scaffold, allowlist auth seam',
+    lane:'frontend', state:'done', since:'2026-07-27', spec:'FE §3, SD §12', owner:'CTO-FE' },
+  { id:'M0-SH-05', title:'Cross-repo CI: workspace reconstruction, root mirror, governance under git',
+    lane:'infra', state:'review', since:'2026-07-27', spec:'D-022', owner:'Fable', shared:true },
+  { id:'M0-BE-24', title:'Real backend CI: reconstruction recipe + Postgres gates',
+    lane:'infra', state:'todo', since:'2026-07-27', spec:'SD §13, D-022', owner:'CTO-BE' },
+  { id:'M0-FE-14', title:'Real frontend CI: 11 gates on Linux + Playwright baselines',
+    lane:'infra', state:'todo', since:'2026-07-27', spec:'FE §19, D-022', owner:'CTO-FE' },
+  { id:'M0-SH-13', title:'tokens — emit the D-018 consolidation list (breakpoints, shell, interaction, leading-initial)',
+    lane:'shared', state:'done', since:'2026-07-27', spec:'FE §7 §9.1 §11 §13, D-018, D-021', owner:'Fable', shared:true },
+  { id:'M0-FE-13', title:'Delete the local-tokens block: consume SH-13’s emissions',
+    lane:'frontend', state:'doing', since:'2026-07-27', spec:'FE §7 §9.1 §11 §13, D-021', owner:'CTO-FE' },
+  { id:'M0-SH-12', title:'contracts — not_implemented code + successStatus descriptor',
+    lane:'shared', state:'done', since:'2026-07-27', spec:'D-019', owner:'Fable', shared:true },
+  { id:'M0-BE-23', title:'FREE_PLAN_DEFAULTS fix (capabilities §16) + not_implemented stubs',
+    lane:'backend', state:'done', since:'2026-07-27', spec:'capabilities §16, D-019', owner:'CTO-BE', risk:true },
+  { id:'M0-SH-11', title:'shared — sideEffects declarations (core/contracts/tokens)',
+    lane:'shared', state:'done', since:'2026-07-27', spec:'D-018', owner:'Fable', shared:true },
+  { id:'M0-SH-10', title:'contracts — structured prose (ProseSpan/ProseBlock)',
+    lane:'shared', state:'done', since:'2026-07-27', spec:'FE §9.2, D-017', owner:'Fable', shared:true },
+  { id:'M0-SH-09', title:'tokens — type scale, font stacks, voices, measure',
+    lane:'shared', state:'done', since:'2026-07-26', spec:'FE §6, D-012', owner:'Fable', shared:true },
+  { id:'M0-SH-04', title:'packages/core — schemas, formatters, ink/voice maps',
+    lane:'shared', state:'done', since:'2026-07-26', spec:'FE §3, D-014', owner:'Fable', shared:true },
+  { id:'M0-FE-02', title:'Self-hosted fonts, subset, ≤100KB',
+    lane:'frontend', state:'done', since:'2026-07-27', spec:'FE §6.1', owner:'CTO-FE' },
+  { id:'M0-FE-03', title:'Three shells: feed, reading, private + breakpoints',
+    lane:'frontend', state:'done', since:'2026-07-27', spec:'FE §7', owner:'CTO-FE' },
+  { id:'M0-FE-04', title:'Primitives: Button, Chip, Field, Rule',
+    lane:'frontend', state:'done', since:'2026-07-27', spec:'FE §9.1', owner:'CTO-FE' }
+];
+/* ───────────────────────────────────────────────────────────── */
+
+const daysSince = d => Math.max(0, Math.floor((Date.now() - new Date(d)) / 864e5));
+
+function render() {
+  const laneFilter = document.getElementById('lane').value;
+  const shown = TICKETS.filter(t => !laneFilter || t.lane === laneFilter);
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+
+  for (const [state, label] of STATES) {
+    const items = shown.filter(t => t.state === state);
+    const col = document.createElement('section');
+    col.className = 'col';
+    col.dataset.state = state;
+    col.innerHTML =
+      '<div class="colhead"><span class="colname">' + label +
+      '</span><span class="coln">' + items.length + '</span></div>' +
+      '<div class="stack">' + (items.length
+        ? items.map(card).join('')
+        : '<p class="empty">Nothing here.</p>') + '</div>';
+    board.appendChild(col);
+  }
+
+  const c = s => TICKETS.filter(t => t.state === s).length;
+  document.getElementById('counts').innerHTML =
+    '<span>open <b>' + (TICKETS.length - c('done')) + '</b></span>' +
+    '<span>done <b>' + c('done') + '</b></span>' +
+    '<span>blocked <b>' + (c('blocked') + c('decision')) + '</b></span>';
+  document.getElementById('ms').textContent = MILESTONE;
+}
+
+function card(t) {
+  const age = daysSince(t.since);
+  const stale = ['blocked','decision','validation'].includes(t.state);
+  const cls = stale && age >= 3 ? 'bad' : (age >= 3 ? 'warn' : '');
+  return '<article class="card" data-lane="' + t.lane + '">' +
+    '<div class="cid"><span>' + t.id + '</span>' +
+      '<span class="age ' + cls + '">' + age + 'd</span></div>' +
+    '<p class="ctitle">' + t.title + '</p>' +
+    '<div class="cmeta">' +
+      (t.spec   ? '<span class="tag spec">' + t.spec + '</span>' : '') +
+      (t.owner  ? '<span class="tag owner">' + t.owner + '</span>' : '') +
+      (t.shared ? '<span class="tag shared">shared</span>' : '') +
+      (t.risk   ? '<span class="tag risk">risk</span>' : '') +
+    '</div></article>';
+}
+
+document.getElementById('lane').addEventListener('change', render);
+document.getElementById('theme').addEventListener('click', () => {
+  const el = document.documentElement;
+  el.dataset.theme = el.dataset.theme === 'dark' ? 'light' : 'dark';
+});
+render();
+</script>
+</body>
+</html>
