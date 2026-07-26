@@ -78,8 +78,20 @@ export function scanOperations(yaml) {
     const idMatch = /^ {6}operationId: (\w+)\s*$/.exec(line);
     if (idMatch) {
       if (!pending) throw new Error(`operationId ${idMatch[1]} outside an operation`);
-      operations.push({ ...pending, operationId: idMatch[1] });
+      operations.push({ ...pending, operationId: idMatch[1], successStatus: null });
       pending = null;
+      continue;
+    }
+
+    // Response codes are quoted keys at exactly 8-space indent, after the
+    // operationId. The lowest 2xx/3xx is the operation's success status.
+    const statusMatch = /^ {8}'(\d{3})':/.exec(line);
+    if (statusMatch && operations.length > 0) {
+      const status = Number(statusMatch[1]);
+      const op = operations[operations.length - 1];
+      if (status >= 200 && status < 400 && (op.successStatus === null || status < op.successStatus)) {
+        op.successStatus = status;
+      }
     }
   }
   flush();
@@ -89,6 +101,9 @@ export function scanOperations(yaml) {
   for (const op of operations) {
     if (seen.has(op.operationId)) throw new Error(`duplicate operationId: ${op.operationId}`);
     seen.add(op.operationId);
+    if (op.successStatus === null) {
+      throw new Error(`operation ${op.operationId} declares no 2xx/3xx response`);
+    }
   }
   return operations;
 }
@@ -179,6 +194,7 @@ export function renderServerTypes(operations) {
   lines.push('  readonly method: HttpMethod;');
   lines.push('  readonly path: string;');
   lines.push('  readonly mutating: boolean;');
+  lines.push('  readonly successStatus: number;');
   lines.push('}');
   lines.push('');
   lines.push('/** Every operation in the contract. `apps/api` asserts its registered routes');
@@ -186,7 +202,7 @@ export function renderServerTypes(operations) {
   lines.push('export const ROUTES = {');
   for (const op of operations) {
     lines.push(
-      `  ${op.operationId}: { method: '${op.method}', path: '${op.path}', mutating: ${MUTATING.has(op.method)} },`,
+      `  ${op.operationId}: { method: '${op.method}', path: '${op.path}', mutating: ${MUTATING.has(op.method)}, successStatus: ${op.successStatus} },`,
     );
   }
   lines.push('} as const satisfies Record<OperationId, RouteDescriptor>;');

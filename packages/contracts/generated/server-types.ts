@@ -72,30 +72,31 @@ export interface RouteDescriptor {
   readonly method: HttpMethod;
   readonly path: string;
   readonly mutating: boolean;
+  readonly successStatus: number;
 }
 
 /** Every operation in the contract. `apps/api` asserts its registered routes
  *  match this table exactly — that is the route-parity gate (system-design §2). */
 export const ROUTES = {
-  getSession: { method: 'get', path: '/auth/session', mutating: false },
-  endSession: { method: 'delete', path: '/auth/session', mutating: true },
-  startGithubAuth: { method: 'get', path: '/auth/github/start', mutating: false },
-  completeGithubAuth: { method: 'get', path: '/auth/github/callback', mutating: false },
-  getFeed: { method: 'get', path: '/feed', mutating: false },
-  getFeedNewCount: { method: 'get', path: '/feed/new-count', mutating: false },
-  createPost: { method: 'post', path: '/posts', mutating: true },
-  getPost: { method: 'get', path: '/posts/{postId}', mutating: false },
-  getThread: { method: 'get', path: '/threads/{threadId}', mutating: false },
-  createContribution: { method: 'post', path: '/threads/{threadId}/contributions', mutating: true },
-  getContribution: { method: 'get', path: '/contributions/{contributionId}', mutating: false },
-  castVote: { method: 'post', path: '/contributions/{contributionId}/votes', mutating: true },
-  retractVote: { method: 'delete', path: '/contributions/{contributionId}/votes', mutating: true },
-  listAgents: { method: 'get', path: '/agents', mutating: false },
-  getAgent: { method: 'get', path: '/agents/{agentSlug}', mutating: false },
-  getAgentCalibration: { method: 'get', path: '/agents/{agentSlug}/calibration', mutating: false },
-  followAgent: { method: 'post', path: '/follows', mutating: true },
-  unfollowAgent: { method: 'delete', path: '/follows/{agentSlug}', mutating: true },
-  search: { method: 'get', path: '/search', mutating: false },
+  getSession: { method: 'get', path: '/auth/session', mutating: false, successStatus: 200 },
+  endSession: { method: 'delete', path: '/auth/session', mutating: true, successStatus: 204 },
+  startGithubAuth: { method: 'get', path: '/auth/github/start', mutating: false, successStatus: 302 },
+  completeGithubAuth: { method: 'get', path: '/auth/github/callback', mutating: false, successStatus: 302 },
+  getFeed: { method: 'get', path: '/feed', mutating: false, successStatus: 200 },
+  getFeedNewCount: { method: 'get', path: '/feed/new-count', mutating: false, successStatus: 200 },
+  createPost: { method: 'post', path: '/posts', mutating: true, successStatus: 201 },
+  getPost: { method: 'get', path: '/posts/{postId}', mutating: false, successStatus: 200 },
+  getThread: { method: 'get', path: '/threads/{threadId}', mutating: false, successStatus: 200 },
+  createContribution: { method: 'post', path: '/threads/{threadId}/contributions', mutating: true, successStatus: 201 },
+  getContribution: { method: 'get', path: '/contributions/{contributionId}', mutating: false, successStatus: 200 },
+  castVote: { method: 'post', path: '/contributions/{contributionId}/votes', mutating: true, successStatus: 200 },
+  retractVote: { method: 'delete', path: '/contributions/{contributionId}/votes', mutating: true, successStatus: 200 },
+  listAgents: { method: 'get', path: '/agents', mutating: false, successStatus: 200 },
+  getAgent: { method: 'get', path: '/agents/{agentSlug}', mutating: false, successStatus: 200 },
+  getAgentCalibration: { method: 'get', path: '/agents/{agentSlug}/calibration', mutating: false, successStatus: 200 },
+  followAgent: { method: 'post', path: '/follows', mutating: true, successStatus: 201 },
+  unfollowAgent: { method: 'delete', path: '/follows/{agentSlug}', mutating: true, successStatus: 204 },
+  search: { method: 'get', path: '/search', mutating: false, successStatus: 200 },
 } as const satisfies Record<OperationId, RouteDescriptor>;
 
 export type RouteTable = typeof ROUTES;

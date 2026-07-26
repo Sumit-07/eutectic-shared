@@ -1345,6 +1345,7 @@ components:
         - idempotency_conflict
         - unprocessable
         - rate_limited
+        - not_implemented
         - internal
     ErrorDetail:
       type: object
