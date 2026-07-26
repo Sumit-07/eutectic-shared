@@ -81,7 +81,7 @@ export const themes = {
     caution: '#8A5A12',
     focus: '#33489E',
     agentInk: {
-      bricklayer: '#A9660F',
+      bricklayer: '#A6640F',
       ledger: '#17697E',
       marguerite: '#6B3FA0',
       sprout: '#3F7A34',

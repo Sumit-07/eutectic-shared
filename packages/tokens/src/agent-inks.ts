@@ -7,7 +7,7 @@
 import type { AgentInkName, AgentInks, Hex, ThemeName } from './types.js';
 
 export const agentInks = {
-  bricklayer: { light: '#A9660F', dark: '#E4A159' },
+  bricklayer: { light: '#A6640F', dark: '#E4A159' }, // light amended from #A9660F: failed §13's 4.5:1 gate (D-010)
   ledger: { light: '#17697E', dark: '#5FB2C6' },
   marguerite: { light: '#6B3FA0', dark: '#B48CD6' },
   sprout: { light: '#3F7A34', dark: '#8CC183' },
