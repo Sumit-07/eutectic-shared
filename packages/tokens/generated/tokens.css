@@ -95,6 +95,21 @@
     --eu-measure: 64ch;
     --eu-measure-idea: 58ch;
     --eu-measure-argument: 44ch;
+
+    /* frontend-spec §7.1 — shell columns: rails 236/300, centre 720, private 640 */
+    --eu-shell-rail-start: 236px;
+    --eu-shell-rail-end: 300px;
+    --eu-shell-column: 720px;
+    --eu-shell-column-private: 640px;
+
+    /* frontend-spec §7.4 — the gutter initial’s leading; the one value below 1 */
+    --eu-leading-initial: 0.85;
+
+    /* frontend-spec §9.1 / §11 / §13 — interaction constants outside the §5.4 scales */
+    --eu-shimmer-duration: 1.4s;
+    --eu-sheet-backdrop: rgb(22 23 26/.32);
+    --eu-tooltip-delay: 400ms;
+    --eu-touch-target: 44px;
   }
 
   :root,
@@ -241,6 +256,43 @@
   --text-meta--line-height: var(--eu-text-meta-line-height);
   --text-micro: var(--eu-text-micro-size);
   --text-micro--line-height: var(--eu-text-micro-line-height);
+
+  /* frontend-spec §7.4 — leading-initial, the gutter initial’s .85 */
+  --leading-initial: var(--eu-leading-initial);
+}
+
+/* Query-side values — literals by necessity (M0-SH-13). */
+@theme {
+  /* frontend-spec §7.2 — 480/780/1180. Tailwind’s own 640/768/1024/1280/1536
+     scale is not this product’s scale, so the defaults are cleared rather than
+     shadowed: an off-spec `xl:`/`2xl:` variant must not silently compile. Base
+     declarations are xs (<480); media queries are for shells only. */
+  --breakpoint-*: initial;
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 780px;
+  --breakpoint-lg: 1180px;
+
+  /* frontend-spec §7.2 — the same thresholds measured against the component’s
+     own column: components use container queries, only shells use media
+     queries. Prefixed `eu-` because Tailwind’s default `--container-*` scale
+     also backs `max-w-*`. */
+  --container-eu-sm: 480px;
+
+  /* frontend-spec §11 — "Skeleton | 1.4s linear shimmer, static under
+     reduced-motion". Opacity only — gradients are banned (CLAUDE.md §4).
+     "Static under reduced-motion" is the caller’s `motion-safe:` variant. */
+  --animate-shimmer: eu-shimmer var(--eu-shimmer-duration) linear infinite;
+
+  @keyframes eu-shimmer {
+    /* Trough is an animation depth, not a surface value. */
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
 }
 
 /* Tailwind has no z-index or duration theme namespace. These exist so §5.4
@@ -298,4 +350,29 @@
 }
 @utility measure-argument {
   max-inline-size: var(--eu-measure-argument);
+}
+@utility shell-grid-3 {
+  grid-template-columns: var(--eu-shell-rail-start) minmax(0, 1fr) var(--eu-shell-rail-end);
+}
+@utility shell-grid-2 {
+  grid-template-columns: var(--eu-shell-rail-start) minmax(0, 1fr);
+}
+@utility shell-column {
+  max-inline-size: var(--eu-shell-column);
+}
+@utility shell-column-private {
+  max-inline-size: var(--eu-shell-column-private);
+}
+@utility sheet-backdrop {
+  background-color: var(--eu-sheet-backdrop);
+}
+@utility delay-tooltip {
+  transition-delay: var(--eu-tooltip-delay);
+}
+@utility touch-target {
+  min-inline-size: var(--eu-touch-target);
+  min-block-size: var(--eu-touch-target);
+}
+@utility block-lh {
+  block-size: 1lh;
 }

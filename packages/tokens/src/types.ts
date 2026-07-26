@@ -90,6 +90,21 @@ export interface ResolvedTheme extends SemanticColors {
   agentInk: Record<AgentInkName, Hex>;
 }
 
+/** frontend-spec §7.2 — viewport breakpoints. `xs` is the base, not a token. */
+export type BreakpointName = 'sm' | 'md' | 'lg';
+/** Values are px. */
+export type Breakpoints = Record<BreakpointName, number>;
+
+/** frontend-spec §7.1 — the normative shell column widths. */
+export type ShellColumnName = 'railStart' | 'railEnd' | 'column' | 'columnPrivate';
+/** Values are px. */
+export type ShellColumns = Record<ShellColumnName, number>;
+
+/** frontend-spec §7.2 — container-query thresholds, component-column-relative. */
+export type ContainerName = 'sm';
+/** Values are px. */
+export type Containers = Record<ContainerName, number>;
+
 /**
  * frontend-spec §6.1 — the three faces. Every type-scale entry and voice
  * names its face; the actual stacks live in `fonts.ts`.

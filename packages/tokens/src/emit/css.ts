@@ -11,10 +11,12 @@
  */
 import { agentInks } from '../agent-inks.js';
 import { fontStacks } from '../fonts.js';
+import { sheetBackdrop, shimmerDuration, tooltipDelay, touchTarget } from '../interaction.js';
+import { breakpoint, container, shell } from '../layout.js';
 import { measure } from '../measure.js';
 import { colors } from '../palette.js';
 import { dur, ease, radius, shadow, space, z } from '../scales.js';
-import { typeScale } from '../type-scale.js';
+import { leadingInitial, typeScale } from '../type-scale.js';
 import { GENERATED_SOURCE, GENERATED_WARNING, kebab } from '../tokens.js';
 import type { FaceRole, SemanticColorName, ThemeName } from '../types.js';
 import { agentInkNames, measureNames, typeScaleNames, voiceNames } from '../types.js';
@@ -119,7 +121,68 @@ function scaleBlock(): string {
   for (const name of measureNames) {
     lines.push(decl(`${VAR}measure${measureSuffix(name)}`, `${measure[name]}ch`));
   }
+  lines.push('', '    /* frontend-spec §7.1 — shell columns: rails 236/300, centre 720, private 640 */');
+  for (const [name, px] of Object.entries(shell)) {
+    lines.push(decl(`${VAR}shell-${kebab(name)}`, `${px}px`));
+  }
+  lines.push(
+    '',
+    '    /* frontend-spec §7.4 — the gutter initial’s leading; the one value below 1 */',
+  );
+  lines.push(decl(`${VAR}leading-initial`, leadingInitial));
+  lines.push(
+    '',
+    '    /* frontend-spec §9.1 / §11 / §13 — interaction constants outside the §5.4 scales */',
+  );
+  lines.push(decl(`${VAR}shimmer-duration`, `${shimmerDuration / 1000}s`));
+  lines.push(decl(`${VAR}sheet-backdrop`, sheetBackdrop));
+  lines.push(decl(`${VAR}tooltip-delay`, `${tooltipDelay}ms`));
+  lines.push(decl(`${VAR}touch-target`, `${touchTarget}px`));
   lines.push('  }');
+  return lines.join('\n');
+}
+
+/**
+ * Breakpoints, container thresholds and the shimmer animation live in a plain
+ * `@theme` (not `@theme inline`, no `--eu-` indirection for the widths): a
+ * media or container query condition cannot contain `var()`, so Tailwind must
+ * see these as literals to build `sm:`/`md:`/`lg:` and `@eu-sm:` variants.
+ */
+function shellThemeBlock(): string {
+  const lines: string[] = ['@theme {'];
+  lines.push('  /* frontend-spec §7.2 — 480/780/1180. Tailwind’s own 640/768/1024/1280/1536');
+  lines.push('     scale is not this product’s scale, so the defaults are cleared rather than');
+  lines.push('     shadowed: an off-spec `xl:`/`2xl:` variant must not silently compile. Base');
+  lines.push('     declarations are xs (<480); media queries are for shells only. */');
+  lines.push(decl('--breakpoint-*', 'initial', '  '));
+  for (const [name, px] of Object.entries(breakpoint)) {
+    lines.push(decl(`--breakpoint-${kebab(name)}`, `${px}px`, '  '));
+  }
+  lines.push('');
+  lines.push('  /* frontend-spec §7.2 — the same thresholds measured against the component’s');
+  lines.push('     own column: components use container queries, only shells use media');
+  lines.push('     queries. Prefixed `eu-` because Tailwind’s default `--container-*` scale');
+  lines.push('     also backs `max-w-*`. */');
+  for (const [name, px] of Object.entries(container)) {
+    lines.push(decl(`--container-eu-${kebab(name)}`, `${px}px`, '  '));
+  }
+  lines.push('');
+  lines.push('  /* frontend-spec §11 — "Skeleton | 1.4s linear shimmer, static under');
+  lines.push('     reduced-motion". Opacity only — gradients are banned (CLAUDE.md §4).');
+  lines.push('     "Static under reduced-motion" is the caller’s `motion-safe:` variant. */');
+  lines.push(decl('--animate-shimmer', `eu-shimmer var(${VAR}shimmer-duration) linear infinite`, '  '));
+  lines.push('');
+  lines.push('  @keyframes eu-shimmer {');
+  lines.push('    /* Trough is an animation depth, not a surface value. */');
+  lines.push('    0%,');
+  lines.push('    100% {');
+  lines.push('      opacity: 1;');
+  lines.push('    }');
+  lines.push('    50% {');
+  lines.push('      opacity: 0.5;');
+  lines.push('    }');
+  lines.push('  }');
+  lines.push('}');
   return lines.join('\n');
 }
 
@@ -167,6 +230,9 @@ function tailwindThemeBlock(): string {
       decl(`--text-${kebab(name)}--line-height`, `var(${VAR}text-${kebab(name)}-line-height)`, '  '),
     );
   }
+  lines.push('');
+  lines.push('  /* frontend-spec §7.4 — leading-initial, the gutter initial’s .85 */');
+  lines.push(decl('--leading-initial', `var(${VAR}leading-initial)`, '  '));
   lines.push('}');
   return lines.join('\n');
 }
@@ -206,6 +272,56 @@ function utilityBlock(): string {
       '}',
     );
   }
+  // frontend-spec §7.1 — shell grids and column caps (M0-SH-13; retires the
+  // local-tokens block in apps/web). Tailwind has no theme namespace for
+  // explicit grid tracks, so these are the same D-010 @utility shape.
+  lines.push(
+    '@utility shell-grid-3 {',
+    `  grid-template-columns: var(${VAR}shell-rail-start) minmax(0, 1fr) var(${VAR}shell-rail-end);`,
+    '}',
+  );
+  // §7.2 md — the right rail is gone; the remaining tracks keep their widths
+  // so the centre column does not jump when the rail drops.
+  lines.push(
+    '@utility shell-grid-2 {',
+    `  grid-template-columns: var(${VAR}shell-rail-start) minmax(0, 1fr);`,
+    '}',
+  );
+  lines.push(
+    '@utility shell-column {',
+    `  max-inline-size: var(${VAR}shell-column);`,
+    '}',
+  );
+  lines.push(
+    '@utility shell-column-private {',
+    `  max-inline-size: var(${VAR}shell-column-private);`,
+    '}',
+  );
+  // §11's sheet backdrop, reachable through Tailwind's `backdrop:` variant so
+  // the value stays in tokens and the component only names it.
+  lines.push(
+    '@utility sheet-backdrop {',
+    `  background-color: var(${VAR}sheet-backdrop);`,
+    '}',
+  );
+  // §9.1's 400ms tooltip delay — reveal state only; the base state keeps a 0
+  // delay so a tooltip disappears the moment pointer or focus leaves.
+  lines.push(
+    '@utility delay-tooltip {',
+    `  transition-delay: var(${VAR}tooltip-delay);`,
+    '}',
+  );
+  // §13's 44×44 minimum, logical so it survives a writing-mode change.
+  lines.push(
+    '@utility touch-target {',
+    `  min-inline-size: var(${VAR}touch-target);`,
+    `  min-block-size: var(${VAR}touch-target);`,
+    '}',
+  );
+  // One line box of whatever type scale is in effect. Not a token — `lh` is a
+  // CSS unit Tailwind has no namespace for — but it is what makes a Skeleton
+  // exactly as tall as the text it stands in for (§14 CLS ≤ 0.02).
+  lines.push('@utility block-lh {', '  block-size: 1lh;', '}');
   return lines.join('\n');
 }
 
@@ -229,6 +345,9 @@ export function renderTokensCss(): string {
     '',
     '/* Tailwind v4 binding. `inline` keeps the var reference in the utility. */',
     tailwindThemeBlock(),
+    '',
+    '/* Query-side values — literals by necessity (M0-SH-13). */',
+    shellThemeBlock(),
     '',
     '/* Tailwind has no z-index or duration theme namespace. These exist so §5.4',
     '   is reachable without an arbitrary value (CLAUDE.md rule 2). */',
