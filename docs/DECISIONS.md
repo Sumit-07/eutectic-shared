@@ -6,6 +6,20 @@ Format: `D-NNN · date · who · decision · why · what it forecloses`.
 
 ---
 
+## D-025 · 2026-07-27 · Fable · M0-BE-24 accepted: backend CI is real; the D-023 protocol ran end-to-end; serialization over isolation for the test step
+
+**Decision.** M0-BE-24 merged (eutectic-backend develop @ 9e918a5, PR #22). Backend CI now reconstructs the workspace per D-022, runs all 13 migrations against a fresh postgres:16, backs cache/api integration suites with a real redis:7 (never mocked around), and runs build/typecheck/test filtered to backend packages — the rule-9 premium-neutrality guard and the worker suite now run in CI. Green on branch (run 30223716226), on develop (30223925048), and the D-023 superseding dispatch on shared develop (30223955727) closed the lockstep window green.
+
+**The rule-12 gate demonstrably works:** the first run (30222801365) failed `ERR_PNPM_OUTDATED_LOCKFILE` precisely because the PR changed dependencies before the mirror landed — the red-gate evidence and the enforcement proof are the same run.
+
+Rulings from the four-red-run fix chain (51abd44→644476e), recorded so nobody rediscovers them:
+1. **pnpm directory filters need braces to pull workspace dependencies**: `--filter "{./eutectic-backend/**}..."` builds @eutectic/contracts before apps/api; the unbraced `**...` form is silently a plain glob. Always sanity-check the "Scope: N of 14" log line.
+2. **Test step is serialized** (`--workspace-concurrency=1`) rather than per-suite database isolation: the worker smoke test's drain timeout came from suites sharing one DATABASE_URL concurrently. Serialization costs ~2 min wall clock and removes the whole interference class; per-suite databases are the upgrade path if CI wall-clock ever matters. Raising the timeout was rejected — a rarer flake is worse than a fixed cause.
+3. **D-023 amendment (supersedes its foreclosure line):** while a lockstep window is open (mirror landed, domain PR unmerged), `[skip ci]` is permitted on ANY shared commit — every push in the window false-reds for the same structural reason — provided the commit message says so and the superseding dispatch follows the domain merge.
+4. **Observation, not yet a defect:** the merge push to backend develop produced no push-triggered run (triggers verified correct; the manual dispatch covered it). If it recurs, it becomes a ticket.
+
+**Forecloses.** Unbraced dependency filters in any workflow; mocking around Redis/Postgres in integration suites; parallel test steps sharing one database without isolation; timeout inflation as a flake fix.
+
 ## D-024 · 2026-07-27 · Fable · M0-FE-13 accepted: the local-tokens block is gone; consolidation ratified, plus a known limit of the visual gate
 
 **Decision.** M0-FE-13 merged (eutectic-frontend develop @ 8146082, PR #12; implementer commits d75d0b1 + 6662bff, CTO-FE review with one rejection cycle). apps/web's local-tokens block is deleted whole (globals.css 277→83 lines); `check-token-lint` is inverted — any local-tokens marker anywhere now fails, and px font-size/duration literals are banned unconditionally; gutter.tsx runs on `leading-initial` (§7.4's .85, D-021) and container-relative `@eu-sm:`. Fable-validated: spot-checked the merged tree (no markers, lint retirement text, gutter classes) on top of CTO-FE's independently reproduced battery (11/11 ci-gates at the merge SHA, ratchets untouched at CLS 0.02474/LCP 2146ms, framework 102.0/102 kB).
