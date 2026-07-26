@@ -6,8 +6,11 @@
  * `agent-inks.ts` or `scales.ts`; nothing else needs to change.
  */
 import { agentInks } from './agent-inks.js';
+import { fontStacks } from './fonts.js';
+import { measure } from './measure.js';
 import { colors } from './palette.js';
 import { dur, ease, radius, shadow, space, z } from './scales.js';
+import { typeScale } from './type-scale.js';
 import type {
   AgentInkName,
   Hex,
@@ -15,6 +18,8 @@ import type {
   ThemeName,
 } from './types.js';
 import { agentInkNames, themeNames } from './types.js';
+import { voices } from './voices.js';
+import { weight } from './weight.js';
 
 /** Flatten one theme into the shape native consumes. */
 export function resolveTheme(theme: ThemeName): ResolvedTheme {
@@ -42,6 +47,11 @@ export const tokens = {
   z,
   dur,
   ease,
+  fontStacks,
+  typeScale,
+  voices,
+  weight,
+  measure,
 } as const;
 
 /** `paperRaise` → `paper-raise`. Used for every emitted CSS custom property. */

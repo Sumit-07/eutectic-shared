@@ -44,6 +44,57 @@
     --eu-dur-3: 280ms;
     --eu-ease-out: cubic-bezier(.2,.8,.3,1);
     --eu-ease-in-out: cubic-bezier(.5,0,.3,1);
+
+    /* frontend-spec §6.1 — font stacks (face self-hosted by M0-FE-02) */
+    --eu-font-prose: 'Newsreader', Georgia, 'Iowan Old Style', serif;
+    --eu-font-ui: 'Instrument Sans', system-ui, sans-serif;
+    --eu-font-mono: 'Commit Mono', ui-monospace, 'IBM Plex Mono', monospace;
+
+    /* frontend-spec §6.3 — weight; emphasis (600) is names/buttons only, never 700+ */
+    --eu-weight-regular: 400;
+    --eu-weight-medium: 500;
+    --eu-weight-emphasis: 600;
+
+    /* frontend-spec §6.3 — type scale, rem (px source ÷16) */
+    --eu-text-display-size: 2.5rem;
+    --eu-text-display-line-height: 1.1;
+    --eu-text-title-size: 1.6875rem;
+    --eu-text-title-line-height: 1.2;
+    --eu-text-head-size: 1.375rem;
+    --eu-text-head-line-height: 1.25;
+    --eu-text-idea-size: 1.1875rem;
+    --eu-text-idea-line-height: 1.4;
+    --eu-text-body-serif-size: 1.0625rem;
+    --eu-text-body-serif-line-height: 1.65;
+    --eu-text-body-size: 0.9375rem;
+    --eu-text-body-line-height: 1.6;
+    --eu-text-body-mono-size: 0.84375rem;
+    --eu-text-body-mono-line-height: 1.68;
+    --eu-text-label-size: 0.8125rem;
+    --eu-text-label-line-height: 1.4;
+    --eu-text-meta-size: 0.75rem;
+    --eu-text-meta-line-height: 1.4;
+    --eu-text-micro-size: 0.65625rem;
+    --eu-text-micro-line-height: 1.3;
+
+    /* frontend-spec §6.2 — voices: composite family (via font-*) + size + lineHeight + tracking */
+    --eu-voice-serif-size: 1.0625rem;
+    --eu-voice-serif-line-height: 1.65;
+    --eu-voice-serif-tracking: 0px;
+    --eu-voice-mono-size: 0.84375rem;
+    --eu-voice-mono-line-height: 1.68;
+    --eu-voice-mono-tracking: 0px;
+    --eu-voice-terse-size: 0.9375rem;
+    --eu-voice-terse-line-height: 1.5;
+    --eu-voice-terse-tracking: -0.1px;
+    --eu-voice-plain-size: 0.9375rem;
+    --eu-voice-plain-line-height: 1.62;
+    --eu-voice-plain-tracking: 0px;
+
+    /* frontend-spec §6.3 / §1 rule 12 — prose measure, ch */
+    --eu-measure: 64ch;
+    --eu-measure-idea: 58ch;
+    --eu-measure-argument: 44ch;
   }
 
   :root,
@@ -158,6 +209,38 @@
 
   --ease-out: var(--eu-ease-out);
   --ease-in-out: var(--eu-ease-in-out);
+
+  /* frontend-spec §6.1 — font-prose/ui/mono utilities */
+  --font-prose: var(--eu-font-prose);
+  --font-ui: var(--eu-font-ui);
+  --font-mono: var(--eu-font-mono);
+
+  /* frontend-spec §6.3 — weight; emphasis (600) is names/buttons only */
+  --font-weight-regular: var(--eu-weight-regular);
+  --font-weight-medium: var(--eu-weight-medium);
+  --font-weight-emphasis: var(--eu-weight-emphasis);
+
+  /* frontend-spec §6.3 — text-display…text-micro (size + line-height paired) */
+  --text-display: var(--eu-text-display-size);
+  --text-display--line-height: var(--eu-text-display-line-height);
+  --text-title: var(--eu-text-title-size);
+  --text-title--line-height: var(--eu-text-title-line-height);
+  --text-head: var(--eu-text-head-size);
+  --text-head--line-height: var(--eu-text-head-line-height);
+  --text-idea: var(--eu-text-idea-size);
+  --text-idea--line-height: var(--eu-text-idea-line-height);
+  --text-body-serif: var(--eu-text-body-serif-size);
+  --text-body-serif--line-height: var(--eu-text-body-serif-line-height);
+  --text-body: var(--eu-text-body-size);
+  --text-body--line-height: var(--eu-text-body-line-height);
+  --text-body-mono: var(--eu-text-body-mono-size);
+  --text-body-mono--line-height: var(--eu-text-body-mono-line-height);
+  --text-label: var(--eu-text-label-size);
+  --text-label--line-height: var(--eu-text-label-line-height);
+  --text-meta: var(--eu-text-meta-size);
+  --text-meta--line-height: var(--eu-text-meta-line-height);
+  --text-micro: var(--eu-text-micro-size);
+  --text-micro--line-height: var(--eu-text-micro-line-height);
 }
 
 /* Tailwind has no z-index or duration theme namespace. These exist so §5.4
@@ -182,4 +265,37 @@
 }
 @utility dur-3 {
   transition-duration: var(--eu-dur-3);
+}
+@utility voice-serif {
+  font-family: var(--eu-font-prose);
+  font-size: var(--eu-voice-serif-size);
+  line-height: var(--eu-voice-serif-line-height);
+  letter-spacing: var(--eu-voice-serif-tracking);
+}
+@utility voice-mono {
+  font-family: var(--eu-font-mono);
+  font-size: var(--eu-voice-mono-size);
+  line-height: var(--eu-voice-mono-line-height);
+  letter-spacing: var(--eu-voice-mono-tracking);
+}
+@utility voice-terse {
+  font-family: var(--eu-font-ui);
+  font-size: var(--eu-voice-terse-size);
+  line-height: var(--eu-voice-terse-line-height);
+  letter-spacing: var(--eu-voice-terse-tracking);
+}
+@utility voice-plain {
+  font-family: var(--eu-font-ui);
+  font-size: var(--eu-voice-plain-size);
+  line-height: var(--eu-voice-plain-line-height);
+  letter-spacing: var(--eu-voice-plain-tracking);
+}
+@utility measure {
+  max-inline-size: var(--eu-measure);
+}
+@utility measure-idea {
+  max-inline-size: var(--eu-measure-idea);
+}
+@utility measure-argument {
+  max-inline-size: var(--eu-measure-argument);
 }

@@ -19,7 +19,11 @@ export type {
   DurStep,
   Ease,
   EaseName,
+  FaceRole,
+  FontStacks,
   Hex,
+  Measure,
+  MeasureName,
   Radius,
   RadiusName,
   ResolvedTheme,
@@ -30,14 +34,34 @@ export type {
   Space,
   SpaceStep,
   ThemeName,
+  TypeScale,
+  TypeScaleEntry,
+  TypeScaleName,
+  Voice,
+  VoiceName,
+  Voices,
+  Weight,
+  WeightName,
   Z,
   ZName,
 } from './types.js';
-export { agentInkNames, themeNames } from './types.js';
+export {
+  agentInkNames,
+  measureNames,
+  themeNames,
+  typeScaleNames,
+  voiceNames,
+  weightNames,
+} from './types.js';
 
 export { colors, darkColors, lightColors } from './palette.js';
 export { agentInk, agentInks } from './agent-inks.js';
 export { dur, ease, radius, shadow, space, z } from './scales.js';
+export { fontStacks } from './fonts.js';
+export { typeScale } from './type-scale.js';
+export { voices } from './voices.js';
+export { weight } from './weight.js';
+export { measure } from './measure.js';
 export { kebab, resolveTheme, themes, tokens } from './tokens.js';
 
 export {

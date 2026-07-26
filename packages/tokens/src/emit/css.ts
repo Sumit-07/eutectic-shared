@@ -10,16 +10,31 @@
  * `--radius-*`, `--shadow-*`, `--ease-*` namespaces.
  */
 import { agentInks } from '../agent-inks.js';
+import { fontStacks } from '../fonts.js';
+import { measure } from '../measure.js';
 import { colors } from '../palette.js';
 import { dur, ease, radius, shadow, space, z } from '../scales.js';
+import { typeScale } from '../type-scale.js';
 import { GENERATED_SOURCE, GENERATED_WARNING, kebab } from '../tokens.js';
-import type { SemanticColorName, ThemeName } from '../types.js';
-import { agentInkNames } from '../types.js';
+import type { FaceRole, SemanticColorName, ThemeName } from '../types.js';
+import { agentInkNames, measureNames, typeScaleNames, voiceNames } from '../types.js';
+import { voices } from '../voices.js';
+import { weight } from '../weight.js';
 
 const VAR = '--eu-';
 
 function decl(name: string, value: string | number, indent = '    '): string {
   return `${indent}${name}: ${value};`;
+}
+
+/** px → rem, ÷16. Every §6.3 size is a decimal multiple of 0.5, so this is exact. */
+function rem(px: number): string {
+  return `${px / 16}rem`;
+}
+
+/** `measure`'s bare/default entry has no name suffix: `measure`, not `measure-default`. */
+function measureSuffix(name: string): string {
+  return name === 'default' ? '' : `-${kebab(name)}`;
 }
 
 function semanticDecls(theme: ThemeName): string[] {
@@ -73,6 +88,37 @@ function scaleBlock(): string {
   for (const [name, value] of Object.entries(ease)) {
     lines.push(decl(`${VAR}ease-${kebab(name)}`, value));
   }
+  lines.push('', '    /* frontend-spec §6.1 — font stacks (face self-hosted by M0-FE-02) */');
+  for (const [role, stack] of Object.entries(fontStacks)) {
+    lines.push(decl(`${VAR}font-${kebab(role)}`, stack));
+  }
+  lines.push(
+    '',
+    '    /* frontend-spec §6.3 — weight; emphasis (600) is names/buttons only, never 700+ */',
+  );
+  for (const [name, value] of Object.entries(weight)) {
+    lines.push(decl(`${VAR}weight-${kebab(name)}`, value));
+  }
+  lines.push('', '    /* frontend-spec §6.3 — type scale, rem (px source ÷16) */');
+  for (const name of typeScaleNames) {
+    const entry = typeScale[name];
+    lines.push(decl(`${VAR}text-${kebab(name)}-size`, rem(entry.size)));
+    lines.push(decl(`${VAR}text-${kebab(name)}-line-height`, entry.lineHeight));
+  }
+  lines.push(
+    '',
+    '    /* frontend-spec §6.2 — voices: composite family (via font-*) + size + lineHeight + tracking */',
+  );
+  for (const name of voiceNames) {
+    const voice = voices[name];
+    lines.push(decl(`${VAR}voice-${name}-size`, rem(voice.size)));
+    lines.push(decl(`${VAR}voice-${name}-line-height`, voice.lineHeight));
+    lines.push(decl(`${VAR}voice-${name}-tracking`, `${voice.tracking}px`));
+  }
+  lines.push('', '    /* frontend-spec §6.3 / §1 rule 12 — prose measure, ch */');
+  for (const name of measureNames) {
+    lines.push(decl(`${VAR}measure${measureSuffix(name)}`, `${measure[name]}ch`));
+  }
   lines.push('  }');
   return lines.join('\n');
 }
@@ -103,6 +149,24 @@ function tailwindThemeBlock(): string {
   for (const name of Object.keys(ease)) {
     lines.push(decl(`--ease-${kebab(name)}`, `var(${VAR}ease-${kebab(name)})`, '  '));
   }
+  lines.push('');
+  lines.push('  /* frontend-spec §6.1 — font-prose/ui/mono utilities */');
+  for (const role of Object.keys(fontStacks) as FaceRole[]) {
+    lines.push(decl(`--font-${kebab(role)}`, `var(${VAR}font-${kebab(role)})`, '  '));
+  }
+  lines.push('');
+  lines.push('  /* frontend-spec §6.3 — weight; emphasis (600) is names/buttons only */');
+  for (const name of Object.keys(weight)) {
+    lines.push(decl(`--font-weight-${kebab(name)}`, `var(${VAR}weight-${kebab(name)})`, '  '));
+  }
+  lines.push('');
+  lines.push('  /* frontend-spec §6.3 — text-display…text-micro (size + line-height paired) */');
+  for (const name of typeScaleNames) {
+    lines.push(decl(`--text-${kebab(name)}`, `var(${VAR}text-${kebab(name)}-size)`, '  '));
+    lines.push(
+      decl(`--text-${kebab(name)}--line-height`, `var(${VAR}text-${kebab(name)}-line-height)`, '  '),
+    );
+  }
   lines.push('}');
   return lines.join('\n');
 }
@@ -116,6 +180,29 @@ function utilityBlock(): string {
     lines.push(
       `@utility dur-${step} {`,
       `  transition-duration: var(${VAR}dur-${step});`,
+      '}',
+    );
+  }
+  // frontend-spec §6.2 — composite voice utilities. Tailwind v4 has no
+  // namespace for "family+size+lineHeight+tracking together", so this is the
+  // same shape as the z/dur utilities above (CLAUDE.md rule 2).
+  for (const name of voiceNames) {
+    const voice = voices[name];
+    lines.push(
+      `@utility voice-${name} {`,
+      `  font-family: var(${VAR}font-${kebab(voice.face)});`,
+      `  font-size: var(${VAR}voice-${name}-size);`,
+      `  line-height: var(${VAR}voice-${name}-line-height);`,
+      `  letter-spacing: var(${VAR}voice-${name}-tracking);`,
+      '}',
+    );
+  }
+  // frontend-spec §6.3 / §1 rule 12 — prose measure. Retires D-012's local
+  // `@utility measure` in apps/web (deletion happens in M0-FE-02).
+  for (const name of measureNames) {
+    lines.push(
+      `@utility measure${measureSuffix(name)} {`,
+      `  max-inline-size: var(${VAR}measure${measureSuffix(name)});`,
       '}',
     );
   }

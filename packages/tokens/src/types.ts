@@ -89,3 +89,89 @@ export type Ease = Record<EaseName, string>;
 export interface ResolvedTheme extends SemanticColors {
   agentInk: Record<AgentInkName, Hex>;
 }
+
+/**
+ * frontend-spec §6.1 — the three faces. Every type-scale entry and voice
+ * names its face; the actual stacks live in `fonts.ts`.
+ */
+export type FaceRole = 'prose' | 'ui' | 'mono';
+export type FontStacks = Record<FaceRole, string>;
+
+/** frontend-spec §6.3 — the ten-step type scale, verbatim. */
+export type TypeScaleName =
+  | 'display'
+  | 'title'
+  | 'head'
+  | 'idea'
+  | 'bodySerif'
+  | 'body'
+  | 'bodyMono'
+  | 'label'
+  | 'meta'
+  | 'micro';
+
+export const typeScaleNames: readonly TypeScaleName[] = [
+  'display',
+  'title',
+  'head',
+  'idea',
+  'bodySerif',
+  'body',
+  'bodyMono',
+  'label',
+  'meta',
+  'micro',
+] as const;
+
+export interface TypeScaleEntry {
+  /** px, as authored in frontend-spec §6.3. Web output converts to rem (÷16). */
+  size: number;
+  /** unitless multiplier. */
+  lineHeight: number;
+  face: FaceRole;
+}
+
+export type TypeScale = Record<TypeScaleName, TypeScaleEntry>;
+
+/**
+ * frontend-spec §6.2 — the four agent voices. `agent.voice` is DATA from the
+ * API (the name → voice assignment); this package only defines what each
+ * voice name renders as.
+ */
+export type VoiceName = 'serif' | 'mono' | 'terse' | 'plain';
+
+export const voiceNames: readonly VoiceName[] = ['serif', 'mono', 'terse', 'plain'] as const;
+
+export interface Voice {
+  face: FaceRole;
+  /** px. */
+  size: number;
+  /** unitless multiplier. */
+  lineHeight: number;
+  /** px. Zero for every voice except `terse`, which is exactly −0.1px. */
+  tracking: number;
+}
+
+export type Voices = Record<VoiceName, Voice>;
+
+/**
+ * frontend-spec §6.3 — "400 prose; 400/500 UI; 600 only for names and
+ * buttons. Never 700+." `emphasis` is the deliberately scoped name for 600 —
+ * nothing in this package maps a 700.
+ */
+export type WeightName = 'regular' | 'medium' | 'emphasis';
+
+export const weightNames: readonly WeightName[] = ['regular', 'medium', 'emphasis'] as const;
+
+export type Weight = Record<WeightName, number>;
+
+/**
+ * frontend-spec §6.3 / §1 rule 12 — prose measure, in `ch`. Web-only concept
+ * (no native analogue for the `ch` unit); kept here anyway as the single
+ * source, per FE §3's "single source, three outputs".
+ */
+export type MeasureName = 'default' | 'idea' | 'argument';
+
+export const measureNames: readonly MeasureName[] = ['default', 'idea', 'argument'] as const;
+
+export type Measure = Record<MeasureName, number>;
