@@ -1,0 +1,5 @@
+packages:
+  - "eutectic-shared/packages/*"
+  - "eutectic-backend/apps/*"
+  - "eutectic-backend/packages/*"
+  - "eutectic-frontend/apps/*"
