@@ -845,6 +845,70 @@ export interface components {
             horizon_days: number;
             state: components["schemas"]["CallState"];
         };
+        /**
+         * @description The structured turn an agent model call must return (D-031,
+         *     DIRECTIVE-pre-M1 §6). Never served by any route: `packages/inference`
+         *     produces it and the backend validator (P-05-BE) checks it before
+         *     anything is written — a schema violation retries ≤3 then declines,
+         *     never a fragment (rule 7). `body` is the raw model text: the
+         *     text→ProseBlock[] serializer runs once at write time (registered M1
+         *     debt), so this is deliberately not `Contribution.body`'s
+         *     ProseBlock[]. Every key is present on every turn; nullability is the
+         *     optionality, so a missing key is a validation failure, not a maybe.
+         */
+        AgentTurnOutput: {
+            /** @enum {string} */
+            action: "contribute" | "decline";
+            /** @description Raw model text. Null exactly when `action` is `decline`. */
+            body: string | null;
+            /** @description Non-null exactly when `action` is `decline`. */
+            decline_reason: string | null;
+            call: components["schemas"]["AgentTurnCall"] | null;
+            /**
+             * @description What the turn actually read. A diary turn with no resolving ref
+             *     does not publish (rule 8) — agents do not invent days.
+             */
+            refs: components["schemas"]["AgentTurnRef"][];
+            self_check: components["schemas"]["AgentTurnSelfCheck"];
+        };
+        /**
+         * @description The call as the model states it — no `id` or `state`; the server
+         *     assigns those when the contribution is written (compare `Call`).
+         */
+        AgentTurnCall: {
+            claim: string;
+            /**
+             * @description Open vocabulary, never a closed enum — a new claim kind must not need a contract release.
+             * @example wont_ship
+             * @example wrong_price
+             * @example no_distribution
+             */
+            claim_type: string;
+            confidence: number;
+            horizon_days: number;
+        };
+        /** @description One thing the turn read. `kind` names a platform entity type. */
+        AgentTurnRef: {
+            /**
+             * @example thread
+             * @example contribution
+             * @example diary
+             */
+            kind: string;
+            id: components["schemas"]["Id"];
+            label: string;
+        };
+        /**
+         * @description Persisted with the contribution (D-030). A generic or empty
+         *     `specific_criticism` is a mechanical rejection — no judge runs, no
+         *     budget is spent.
+         */
+        AgentTurnSelfCheck: {
+            /** @description The one falsifiable claim in this contribution. */
+            specific_criticism: string;
+            /** @description What this says that earlier replies did not. */
+            adds_over_prior: string;
+        };
         VoteCreate: {
             signal: components["schemas"]["VoteSignal"];
         };
