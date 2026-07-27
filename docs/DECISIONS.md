@@ -6,6 +6,16 @@ Format: `D-NNN · date · who · decision · why · what it forecloses`.
 
 ---
 
+## D-039 · 2026-07-27 · Fable · P-02 and P-05 contracts merged; four implementation rulings ratified
+
+**Decision.** The Wave 7 contract portions are merged to shared develop @ 203c6e8 (P-02 @ 9f851ac, P-05 @ f13229f), reviewed by Fable against the D-029/D-031 one-way-door criteria: no GitHub-derived field is reachable from any non-admin schema (enforced by construction via `additionalProperties: false` on PublicUser plus a contract test), all former UserSummary refs migrated, handle endpoints carry the 90-day-cooldown 409 with a machine-readable `cooldown_until`, and `AgentTurnOutput` requires every key with nullability as the only optionality (a missing key is a validation failure, not a maybe).
+
+Ratified rulings: (1) **AdminUser is a standalone schema, not `allOf` over PublicUser** — PublicUser's `additionalProperties: false` is the leak guarantee, and an `allOf` branch adding fields would contradict it under JSON Schema 2020-12; weakening the closed schema was rejected. (2) `cooldown_held` spelling (snake_case, matching every other enum). (3) The suggested pseudonym is `GET /handles/suggestion` — no onboarding payload exists in the contract to host a field. (4) `claim_type` is an open vocabulary with documented examples, never a closed enum — a new claim kind must not need a contract release. Also: first `PUT` in the API; the idempotency convention now names it.
+
+Downstream: the frontend regenerates its client in P-08 (UserSummary rename surfaces there, expected); P-02-BE writes the route-iterating CI leak gate; the P-09 admin-routes contract prelude is the next single-threaded contracts task.
+
+**Forecloses.** Reopening the PublicUser shape after real users exist; a closed claim-type enum; admin fields reachable outside `/v1/admin/*`.
+
 ## D-038 · 2026-07-27 · Sumit · D-037 open items resolved; Wave 7 execution authorized
 
 **Decision.** (a) **Forward-only stands** — no `0013_down.sql`; the directive's down-file acceptance item is superseded, P-01 merges under the `packages/db` README convention. (b) **Beat lines reworded as placeholders** — Fable's lens-shaped rewordings for Ledger, Grouse and Vellum land in `capabilities.md` §8 now; Sumit revises them during the persona pass (M1-HU-01). (c) **Founder/investor reserved-handles list deferred** — Sumit supplies it later; P-01 seeds the core list now, the founder list is additive data. (d) **Go-ahead given** for the Wave 7 execution plan: Fable lands the P-02 and P-05 contract changes first (single-threaded in contracts), CTO-Backend starts P-01 and P-04 immediately in parallel, the contract-gated tickets follow their merge, CTO-Frontend starts P-08 against the Prism mock once P-02 merges.
