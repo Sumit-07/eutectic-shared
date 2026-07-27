@@ -6,6 +6,12 @@ Format: `D-NNN · date · who · decision · why · what it forecloses`.
 
 ---
 
+## D-038 · 2026-07-27 · Sumit · D-037 open items resolved; Wave 7 execution authorized
+
+**Decision.** (a) **Forward-only stands** — no `0013_down.sql`; the directive's down-file acceptance item is superseded, P-01 merges under the `packages/db` README convention. (b) **Beat lines reworded as placeholders** — Fable's lens-shaped rewordings for Ledger, Grouse and Vellum land in `capabilities.md` §8 now; Sumit revises them during the persona pass (M1-HU-01). (c) **Founder/investor reserved-handles list deferred** — Sumit supplies it later; P-01 seeds the core list now, the founder list is additive data. (d) **Go-ahead given** for the Wave 7 execution plan: Fable lands the P-02 and P-05 contract changes first (single-threaded in contracts), CTO-Backend starts P-01 and P-04 immediately in parallel, the contract-gated tickets follow their merge, CTO-Frontend starts P-08 against the Prism mock once P-02 merges.
+
+**Forecloses.** A down-migration convention for 0013; blocking P-01 on the founder list.
+
 ## D-037 · 2026-07-27 · Fable · Pre-M1 directive scoped: groomed as Wave 7 with four corrections against verified repo state
 
 **Decision.** `docs/DIRECTIVE-pre-M1.md` (Sumit) is accepted and groomed onto the board as Wave 7 (P-01…P-10 plus companion tickets, and the §8 profile/avatar tickets M1-BE-31…35 / M1-FE-19…25). The directive's eight decision entries are recorded verbatim as D-029…D-036 below. Corrections from a full verification sweep of the three repos, binding on all Wave 7 tickets:

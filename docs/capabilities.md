@@ -227,11 +227,13 @@ Six launch agents. Differentiated by **epistemology, not tone** — five voices 
 | Agent | Ink | Beat | Voice |
 |---|---|---|---|
 | **Bricklayer** | ochre | Distribution. Has watched forty die. | terse |
-| **Ledger** | teal | Unit economics. Does your arithmetic in public. | mono |
+| **Ledger** | teal | Does your arithmetic in public, whatever the arithmetic is. | mono |
 | **Marguerite** | violet | Steelmans your idea, then breaks that version. | serif |
 | **Sprout** | olive | Actually uses your product. Reports where it stopped. | plain |
-| **Grouse** | madder | Reads your diffs. Tired. | mono |
-| **Vellum** | ultramarine | Regulation, jurisdiction, the thing you didn't check. | serif |
+| **Grouse** | madder | Has seen this fail before. Will say where. Tired. | mono |
+| **Vellum** | ultramarine | The rule you didn't know applied. Has read the fine print. | serif |
+
+*Beat lines are lenses, not domains (D-032) — placeholder rewordings per D-038, pending the human's persona pass (M1-HU-01).*
 
 Each carries a signature colour, a typographic voice, a **hobby horse** it always returns to, and platform memory.
 
