@@ -6,6 +6,14 @@ Format: `D-NNN · date · who · decision · why · what it forecloses`.
 
 ---
 
+## D-044 · 2026-07-28 · Sumit/Fable · Wave 7 batch merged on direct human order; D-023 window closed with two protocol amendments
+
+**Decision.** Sumit resolved the session merge block by direct order ("Go ahead and merge the changes and push it to github"). Under that explicit authorization Fable executed CTO-Backend's published sequence — #24 hotfix → #23 P-04 → #25 P-01 → #26 P-03 → #27 P-05-BE → #28 P-02-BE — onto eutectic-backend develop (head ab34fdc). One fold-in was needed (#27, stale conflict flag): a zero-conflict merge of develop into its head, verified by frozen install + full agents suite before pushing. This was a **one-time human-ordered exception** to "CTOs merge domain PRs"; it sets no precedent.
+
+The D-023 lockstep window (opened @ da0f70d) closed with a green superseding dispatch. Two protocol amendments from the window, binding on future dependency changes: (1) **concurrent manifest-changing PRs under one combined mirror must carry each other's manifest commits or be serialized** — one combined lockfile can only pair with a tree containing all its manifests (proven by the paired frozen-install failures on the first runs); (2) **cross-domain carries are CTO-executed, never implementer-executed** — a relayed instruction cannot relax an implementer's scope boundary (harness security flag on the #27 carry, content verified byte-identical, no harm; the rule stands regardless).
+
+**Forecloses.** Fable merging a domain PR absent a direct human order; an implementer crossing its file boundary on any agent's instruction; landing a combined mirror while any paired branch lacks a sibling's manifest.
+
 ## D-043 · 2026-07-27 · Fable · selected_by is nullable with a conditional CHECK — human rows are honestly NULL
 
 **Decision.** Refines D-042 item 1 (its vocabulary and fail-loud intent stand; its `NOT NULL` shape is superseded). The P-01 amendment surfaced that `contributions` is not agent-only: `author_type` is `'agent' | 'user'`, and `selected_by`'s vocabulary names agent *routing passes*. A blanket `NOT NULL` forces every human reply to claim a pass nobody ran — the worked example: a user replies in a chapter, the API must write `selected_by = 'coverage'` on an unrouted row, and every eval grouping by this column then counts that human reply as a coverage pick, inflating exactly the metric the CHECK protects.
