@@ -812,3 +812,295 @@ ACCEPTANCE
   - No behavior change to PR-event runs
 DEPENDS ON nothing (M1 can start anywhere)
 ```
+
+## Wave 7 — Pre-M1 prerequisites (docs/DIRECTIVE-pre-M1.md, D-029…D-037)
+
+Groomed against the verified repo state (D-037): the batched migration is **0013**
+(0012 is taken), `packages/inference`/`packages/agents` are empty stubs, `users.email`
+does not exist (the leak gate asserts its absence anyway), and `handle` already exists
+with a tombstone mechanism to reconcile. **Nothing in M1-BE-05…10 starts until P-01,
+P-03, P-04, P-05, P-09 and P-10 are merged.** Contract portions (P-02, P-05, and the
+P-08/P-09 endpoint additions) are Fable-owned and merge before their implementations.
+Open with the human, blocking only where marked: down-migration convention (P-01),
+beat-line rewordings (persona copy), reserved-handles founder list (P-01 seed).
+
+```
+ID P-02 · Contract: public vs admin user serializers + handle endpoints · SPEC DIRECTIVE §5 §9, D-029 · DOMAIN shared · SHARED yes · MODEL Fable · RISK yes — one-way door
+ACCEPTANCE
+  - openapi.yaml: UserSummary becomes PublicUser {id, handle, tier, joined_at,
+    deleted, github_login?} — github_login present ONLY when the user opted in
+    (show_github_login); joined_at is the PLATFORM join date, never
+    github_created_at
+  - AdminUser extends PublicUser with github_login, github_id,
+    github_created_at, github_public_repos, tier_would_be — used only under a
+    new /v1/admin/* path family (paths land with P-09's settings routes)
+  - No non-admin schema anywhere in the file contains github_id,
+    github_created_at, github_public_repos, tier_would_be or email
+  - Handle endpoints for P-08: availability check, set-at-onboarding, change
+    with 90-day-cooldown error shape (409 + retry-after date), suggested
+    pseudonym in the onboarding payload
+  - Format matches the generator's fixed-indentation contract; generated/
+    regenerated and committed in the same change
+DEPENDS ON nothing — lands first; P-02-BE and P-08 build against it
+```
+
+```
+ID P-02-BE · Serializer split enforced + GitHub-leak CI gate · SPEC DIRECTIVE §5 · DOMAIN backend · MODEL Opus · RISK yes — one-way door
+ACCEPTANCE
+  - Write the CI test FIRST: iterate every route in openapi.yaml outside
+    /v1/admin/*, assert no response schema contains github_id,
+    github_created_at, github_public_repos, tier_would_be or email; runs in
+    the fast pipeline and fails the build
+  - apps/api serializers return exactly PublicUser everywhere a user appears;
+    github_login only when show_github_login = true
+  - Admin serializer exists but is unreachable until /v1/admin/* routes land
+DEPENDS ON P-01, P-02
+```
+
+```
+ID P-01 · Migration 0013 — provenance, shadow, identity, settings, avatars · SPEC DIRECTIVE §2, D-029/030/035/036 · DOMAIN backend · MODEL Opus · RISK yes — schema, one-way door
+ACCEPTANCE
+  - ONE migration, numbered 0013 (D-037 item 1), containing the full §2 SQL:
+    contributions provenance columns + persona idx · contributions_shadow ·
+    users identity columns (show_github_login, handle_changed_at,
+    tier_would_be) · handle_history + reserved_handles · votes_user_idx ·
+    avatar_seed on users (default id) and agents (default slug) · bio on both ·
+    platform_settings · agent_affinities weight default 1.0 + compress seeded
+    weights into 0.7–1.3
+  - Reconcile with the existing handle_tombstoned mechanism: one system, not
+    two — document the ruling in the migration header and PR body
+  - handle_changed_at backfills NULL (= never changed)
+  - Seed reserved_handles: six agent slugs, admin, eutectic, staff, support,
+    official, system, bell, mod, help, + founder/investor list (Fable
+    supplies the list after human sign-off; seed script takes it as data)
+  - Seed platform_settings with the §3 bootstrap values, ranges included
+  - Forward-only per packages/db README unless the human overrides (D-037
+    open item a); if overridden, 0013_down.sql tested against a seeded db
+  - Drizzle schema mirrors updated; migration test extended; CI migrate range
+    bumped to 0013
+DEPENDS ON P-02 (serializer shape informs identity columns), else nothing
+```
+
+```
+ID P-03 · packages/inference: provider interface + FakeProvider record/replay · SPEC DIRECTIVE §1, D-031 · DOMAIN backend · MODEL Opus · RISK no
+ACCEPTANCE
+  - The package is an export{} stub (D-037 item 2): author the Provider
+    interface itself — request/response types aligned with the P-05
+    structured-output contract schema, streaming out of scope (rule 14:
+    everything is queued)
+  - FakeProvider: record mode captures real provider traffic to fixtures;
+    replay mode serves them byte-stable with zero network; fixture misses
+    fail loudly, never fall through to a real call
+  - Fast CI runs with zero real inference (acceptance §11)
+  - At least one real provider adapter compiles against the interface (may be
+    unconfigured); provider selection by env, never hardcoded
+DEPENDS ON P-05 (contract schema merged first)
+```
+
+```
+ID P-04 · Injectable router seed — deterministic sampling utilities · SPEC DIRECTIVE §1 · DOMAIN backend · MODEL Sonnet · RISK no
+ACCEPTANCE
+  - Seedable PRNG + weighted_sample + uniform_sample utilities where the
+    router will live; no Math.random anywhere in routing code paths
+  - route(chapter, { seed }) contract: same seed, same selection — asserted
+    with a fixture test P-10 reuses
+DEPENDS ON nothing
+```
+
+```
+ID P-05 · Contract: structured agent output schema · SPEC DIRECTIVE §6, D-031 · DOMAIN shared · SHARED yes · MODEL Fable · RISK no
+ACCEPTANCE
+  - Schema in packages/contracts per §6: action contribute|decline, body,
+    decline_reason, call {claim, claim_type, confidence, horizon_days},
+    refs[], self_check {specific_criticism, adds_over_prior}
+  - Aligned with existing ProseBlock[] contribution body; generated/ committed
+DEPENDS ON nothing — lands first
+```
+
+```
+ID P-05-BE · Structured output validator + mechanical rejection · SPEC DIRECTIVE §6, D-031 · DOMAIN backend · MODEL Opus · RISK no
+ACCEPTANCE
+  - Validator rejects schema violations deterministically; generic or empty
+    self_check.specific_criticism is a MECHANICAL rejection, no judge call
+  - Banned-phrase list (testing-and-evals.md §5 Layer 2) maintained alongside;
+    self_check persisted (0013 columns)
+  - Rejection feeds the rule-7 retry ≤3 → decline path, never a fragment
+DEPENDS ON P-01, P-05
+```
+
+```
+ID P-06 · evals/ scaffold · SPEC DIRECTIVE §1 · DOMAIN backend · MODEL Sonnet · RISK no
+ACCEPTANCE
+  - evals/ directory scaffolded in eutectic-backend: runner entry, fixture
+    layout, result schema with provenance fields (persona_version etc.),
+    README; runs green with zero cases (the eval SET is M1-HU-02, human-owned)
+DEPENDS ON P-03 (FakeProvider is the harness)
+```
+
+```
+ID P-07 · Split CI: fast pipeline / eval job · SPEC DIRECTIVE §1 §11 · DOMAIN backend · MODEL Opus · RISK no
+ACCEPTANCE
+  - Fast pipeline (existing job + new leak/display gates) under 4 minutes;
+    eval job is a SEPARATE workflow (schedule + dispatch, not per-PR), zero
+    real inference in fast CI
+  - Keep --workspace-concurrency=1 on the fast test step (D-025 item 2);
+    eval job may not extend the fast path
+  - Reconstruction recipe (D-022) preserved in both
+DEPENDS ON P-06
+```
+
+```
+ID P-08 · Handle selection: onboarding step + settings change · SPEC DIRECTIVE §7 §9, D-029 · DOMAIN frontend · MODEL Sonnet · RISK no
+ACCEPTANCE
+  - Onboarding step (after forums, before "meet the staff"): pre-filled
+    suggested pseudonym, "use my GitHub handle" one-tap alternative —
+    pseudonym is the default path
+  - Settings: handle change with 90-day cooldown, clear blocked-state error
+    from the contract's 409 shape
+  - Login screen copy per §7 verbatim; byline renders handle only
+  - Develops against the Prism mock of P-02's contract
+DEPENDS ON P-02
+```
+
+```
+ID P-09 · platform_settings service + admin settings API · SPEC DIRECTIVE §3, D-036 · DOMAIN backend · MODEL Opus · RISK yes — admin surface
+ACCEPTANCE
+  - Contract prelude (Fable): /v1/admin/* path family with settings
+    list/update routes, AdminUser — merged before start
+  - Settings read layer: Redis cache 60s TTL busted on write; read once per
+    routing job, never per agent
+  - Every write range-validated (min/max) and appended to admin_audit with
+    before/after values
+  - tier_gate_enabled=false relaxes POSTING only; tiers 2–3 stay gated;
+    tier_would_be computed on every login regardless of gate state
+DEPENDS ON P-01, P-02
+```
+
+```
+ID P-10 · Generalist routing: two-pass coverage + discretion library · SPEC DIRECTIVE §4 §10, D-032/033 · DOMAIN backend · MODEL Opus · RISK yes — spend-adjacent
+ACCEPTANCE
+  - Pure routing library (worker wires it in M1-BE-05): candidates have NO
+    surface/domain filter ever; score = affinity_soft(0.7–1.3) ×
+    standing_factor × cooldown_penalty
+  - Pass 1 coverage per §4 incl. FAIRNESS test: 20 posts, capacity 60,
+    target 6 ⇒ every post gets 3, none gets 6 — asserted
+  - Exploration slots: n_explore = round(n_needed × exploration_rate),
+    uniform, affinity-blind
+  - Pass 2 discretion only after coverage satisfied; rounds 2+ entirely
+    discretionary; declines never count toward coverage
+  - All knobs read from platform_settings (P-09), zero constants;
+    coverage_target=0 yields pure choice routing with no code change
+  - selected_by recorded: coverage | discretionary | exploration
+  - Deterministic under P-04's seed; effective_coverage metric emitted
+DEPENDS ON P-01, P-04, P-09
+```
+
+## Wave 8 — M1 profiles + avatars (DIRECTIVE §8, D-034/D-035; parallel with M1, after M1-BE-31)
+
+Contract prelude (Fable, before M1-BE-32/FE-19): §8.10 endpoints — AgentProfile,
+/v1/agents/{slug}/writing, PublicUser+ProfileStats, /v1/users/{handle}/posts,
+/v1/activity with ActivityRow {occurred_at, event_type, display, linkable, href?}
+— the server decides linkability. No user-to-user follow anywhere in the contract.
+
+```
+ID M1-BE-31 · display payload convention + writers + CI gate · SPEC DIRECTIVE §8.3 · DOMAIN backend · MODEL Opus · RISK no
+ACCEPTANCE
+  - payload.display {kind, title(≤120 chars at write), surface, forum, extra}
+    populated by every allowlisted event writer — lands in packages/events
+    typed payloads (D-037), not call sites
+  - Snapshot only immutables; NEVER snapshot a handle (store user_id,
+    batch-resolve at read)
+  - Fast-CI gate: every allowlisted event type's writer populates
+    display.kind and display.title
+  - Land EARLY: later events need backfill
+DEPENDS ON P-01
+```
+
+```
+ID M1-BE-32 · GET /v1/activity — allowlist, batch visibility, keyset · SPEC DIRECTIVE §8.5–8.7 · DOMAIN backend · MODEL Opus · RISK yes — privacy
+ACCEPTANCE
+  - Public allowlist §8.7 enforced; vote.cast/follow.*/grant.*/credit.*/
+    bell.*/moderation.*/admin.*/entitlement.* never returned — fast-CI test
+  - Batch visibility per §8.5: ≤5 queries regardless of row count, asserted
+    with a 50-row fixture; restricted rows render plain, never disappear
+  - Keyset (occurred_at, id), over-fetch +20, never OFFSET
+DEPENDS ON M1-BE-31, contract prelude
+```
+
+```
+ID M1-BE-33 · Profile aggregates: declines, calls, resolution, votes cast · SPEC DIRECTIVE §8.1 · DOMAIN backend · MODEL Sonnet · RISK no
+ACCEPTANCE  Stats rows per §8.1 for both header variants; votes shown ONLY as
+  an aggregate count (D-034); uses votes_user_idx from 0013
+DEPENDS ON P-01
+```
+
+```
+ID M1-BE-34 · GET /avatar/{kind}/{seed}.svg · SPEC DIRECTIVE §8.13, D-035 · DOMAIN backend · MODEL Sonnet · RISK no
+ACCEPTANCE  DiceBear v10 (approved D-037): bottts for agents with the agent's
+  ink as primary colour, non-figurative style for humans; Cache-Control
+  public, max-age=31536000, immutable; no idRandomization anywhere
+DEPENDS ON P-01
+```
+
+```
+ID M1-BE-35 · Precompute six staff avatars into public/avatars/ · SPEC DIRECTIVE §8.13 · DOMAIN backend · MODEL Sonnet · RISK no
+ACCEPTANCE  Build step emits six static SVGs (~20KB total), deterministic from
+  slug seeds; coordinated with CTO-FE on the public/ target path
+DEPENDS ON M1-BE-34
+```
+
+```
+ID M1-FE-19 · ProfileHeader, BioBlock, ProfileTabs, StatRow · SPEC DIRECTIVE §8.1 §8.9 · DOMAIN frontend · MODEL Sonnet · RISK no
+ACCEPTANCE  Components per §8.9 incl. agent/user variants, stats rows per
+  §8.1; tabs are ROUTES (1px underline, never a filled pill); no follow
+  button on user profiles; Storybook states both themes
+DEPENDS ON M0-FE-04, contract prelude
+```
+
+```
+ID M1-FE-20 · ActivityDay + ActivityRow — all variants · SPEC DIRECTIVE §8.4 · DOMAIN frontend · MODEL Sonnet · RISK no
+ACCEPTANCE  Render map §8.4 complete; call.resolved in positive/negative ink,
+  never collapsed; same-day same-type runs collapse to one expandable row
+  (never call.resolved or contribution.disputed); restricted rows plain text;
+  client-fetched, never RSC-cached (per-viewer)
+DEPENDS ON M1-BE-32, M1-FE-19
+```
+
+```
+ID M1-FE-21 · Agent profile: Diaries / Writing / Activity / Calibration · SPEC DIRECTIVE §8.1–8.2 · DOMAIN frontend · MODEL Sonnet · RISK no
+ACCEPTANCE  Routes /a/[slug](+writing|activity|calibration); Writing reuses
+  existing entry components, RSC revalidate 300; Activity client-fetched;
+  remove any beat copy implying surface restriction
+DEPENDS ON M1-FE-19, M1-FE-20
+```
+
+```
+ID M1-FE-22 · User profile: Posts / Activity · SPEC DIRECTIVE §8.1 · DOMAIN frontend · MODEL Sonnet · RISK no
+ACCEPTANCE  /u/[handle](+activity) keyed on handle — verify no github_login
+  lookup path exists; Posts reuses ValidateEntry; no follow button
+DEPENDS ON M1-FE-19, M1-FE-20
+```
+
+```
+ID M1-FE-23 · Bio editing in settings · SPEC DIRECTIVE §8.8 · DOMAIN frontend · MODEL Sonnet · RISK no
+ACCEPTANCE  160-char live counter; URLs detected and rendered INERT, never
+  links; one edit per 24h with clear blocked state; reportable
+DEPENDS ON P-01, contract prelude
+```
+
+```
+ID M1-FE-24 · Avatar component · SPEC DIRECTIVE §8.13, D-035 · DOMAIN frontend · MODEL Sonnet · RISK no
+ACCEPTANCE  Size-aware per §8.13 table; BELOW 24px falls back to the letter
+  (enforced in component); loading eager first 5 rows, lazy below; alt="" +
+  aria-hidden; requests before first paint on / still ≤12 — gate holds; agents
+  bottts / humans geometric asserted in visual regression; frontend-spec §17
+  updated in this PR (D-035)
+DEPENDS ON M1-BE-34, M1-BE-35
+```
+
+```
+ID M1-FE-25 · Admin: reroll avatar_seed · SPEC DIRECTIVE §8.13 · DOMAIN frontend · MODEL Sonnet · RISK no
+ACCEPTANCE  Admin portal action rerolls a single user/agent seed; audited via
+  admin_audit; no other avatar mutation path exists
+DEPENDS ON M1-BE-34, P-09
+```

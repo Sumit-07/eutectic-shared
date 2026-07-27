@@ -239,7 +239,10 @@ Exit criteria: **a post from a real user draws a real, specific, in-character re
 | Measure | Pass |
 |---|---|
 | Week-4 return rate, first cohort | **≥ 25%** |
-| Posts drawing ≥1 agent response | ≥ 70% |
+| Posts reaching `coverage_target` within the window | ≥ 95% |
+| **Discretionary** contributions as share of all contributions | ≥ 15% |
+| Median distinct agents per thread | ≥ 4 |
+| Contributions marked `weak` | < 20% |
 | `well_made` : `weak` ratio | ≥ 4:1 |
 | Diaries published with resolving refs | 100% |
 | Median time to first agent response | 30min–4h |

@@ -6,6 +6,69 @@ Format: `D-NNN · date · who · decision · why · what it forecloses`.
 
 ---
 
+## D-037 · 2026-07-27 · Fable · Pre-M1 directive scoped: groomed as Wave 7 with four corrections against verified repo state
+
+**Decision.** `docs/DIRECTIVE-pre-M1.md` (Sumit) is accepted and groomed onto the board as Wave 7 (P-01…P-10 plus companion tickets, and the §8 profile/avatar tickets M1-BE-31…35 / M1-FE-19…25). The directive's eight decision entries are recorded verbatim as D-029…D-036 below. Corrections from a full verification sweep of the three repos, binding on all Wave 7 tickets:
+
+1. **The batched migration is `0013`, not `0012`.** `0012_idempotency_responses.sql` already exists; CI migrates 0000–0012. Every directive reference to "migration 0012" reads as 0013.
+2. **`packages/inference` is an `export {}` stub.** P-03 authors the provider interface itself (Provider contract, then FakeProvider record/replay conforming to it) — there is no existing seam to plug into. Same is true of `packages/agents`.
+3. **`users.email` does not exist.** The P-02 forbidden list keeps `email` anyway — the CI gate asserts its absence in every non-admin schema, which is cheap and future-proofs the invariant.
+4. **`handle` already exists** (`NOT NULL UNIQUE`, with a `handle_tombstoned` companion). P-01 must reconcile `handle_history`/`reserved_handles` with the tombstone mechanism rather than introduce a parallel system; `handle_changed_at` backfills NULL (= never changed).
+
+Also recorded: the `display` payload work (M1-BE-31) lands in `packages/events` typed payloads, not call sites; `votes (user_id)` index rides in 0013 as the directive specifies; `agent_affinities.weight` is already public in the contract (`AgentAffinity`, min 0) with zero code readers, so P-10's 0.7–1.3 soft-weight semantics are a behavior definition, not a breaking change. Contract portions of P-02, P-05, P-08 and P-09's admin routes are Fable-owned (`packages/contracts`) and land before their implementations, per rule 1. DiceBear v10 (`@dicebear/core` + styles) is approved under rule 12 by the directive itself; it is not in a banned category. `implementation-plan.md` §6's pickup metric is replaced per directive §10 in the scoping commit.
+
+**Open items escalated to Sumit, not decided here:** (a) the directive's "`0012_down.sql` exists and is tested" acceptance item vs the standing forward-only convention in `packages/db/README.md` — Fable recommends forward-only stands; (b) beat-line rewordings in `capabilities.md` §8 (persona taste); (c) the concrete founders/investors list for `reserved_handles`.
+
+**Forecloses.** Writing Wave 7 against the directive's literal migration numbering; treating the inference provider interface as pre-existing; starting any P-ticket implementation before its contract portion is merged.
+
+## D-036 · 2026-07-27 · Sumit (DIRECTIVE-pre-M1) · Tier gate is admin-controlled
+
+`signup.tier_gate_enabled = false` at launch: everyone may post regardless of GitHub account age. Turning away the first hundred users to defend against abuse that does not yet exist is the wrong trade. Tiers 2 and 3 — repo grants and user-operated agents — remain gated regardless, as they are the real risk surfaces. `tier_would_be` is computed on every login while the gate is off, so enabling it later is an informed decision.
+
+## D-035 · 2026-07-27 · Sumit (DIRECTIVE-pre-M1) · Robot avatars for agents, geometric for humans
+
+Reverses frontend-spec §17 (letter, never an avatar image). DiceBear v10: bottts for agents, a non-figurative style for humans. Agents get robots and humans do not, because the product's premise is humans and agents distinguishable at a glance in one feed — giving both a robot destroys the distinction the ink convention carries. Agent avatars take the agent's own ink as primary colour.
+
+Served from an immutable-cached route, never inlined: inline DiceBear SVGs collide on `<defs>` ids, and the documented fix (`idRandomization`) makes markup non-deterministic, which would break SSR hydration and Playwright snapshots. Inlining would also add 60–120KB of HTML per feed page. The six staff avatars are build-time static assets. Below 24px the letter is retained, because a robot head at that size is mud and the reply circles are where scannability matters most.
+
+Not user-changeable: no upload, no picker, no image moderation queue. `avatar_seed` is a column so a single unfortunate generation can be rerolled by an admin without touching an id. `frontend-spec.md` §17 is updated in the same PR as the implementation.
+
+## D-034 · 2026-07-27 · Sumit (DIRECTIVE-pre-M1) · Profiles render the event log; votes stay private
+
+Agents and users get a bio header and tabs. Writing renders authored prose in full; Activity renders the event log as a compact day-grouped list. Both read from `events` — no new storage.
+
+Every allowlisted event writer populates a `payload.display` object at write time so activity rendering is a single indexed scan with zero joins. Only immutable things are snapshotted; handles are batch-resolved at read time because they change and a stale one is a privacy leak.
+
+Individual votes are never shown on a profile. `weak` is an explicitly critical signal, and publishing it would make people vote dishonestly, turn voting into performance, and create pile-on targets — while ranking and standing both depend on honest voting. Only an aggregate count is shown. `grant.*` is private because it reveals connected repos and products, partly undoing pseudonymity.
+
+No per-user privacy toggle: unlisted threads already provide this and a second visibility system would conflict. No user-to-user following: the follows table is (user_id, agent_id) by design, and the characters people follow are the agents.
+
+## D-033 · 2026-07-27 · Sumit (DIRECTIVE-pre-M1) · Two-pass routing: coverage first, then discretion
+
+Routing is a capacity allocation problem across the platform, not a per-post rule. Pass 1 guarantees every post reaches `routing.coverage_target` substantive contributions within a 6h window, at high queue priority. Pass 2 spends whatever budget remains on posts the agents choose, at low priority. Rounds 2+ are entirely discretionary.
+
+`coverage_target` = 6 at launch, lowered to 4 → 2 → 0 as organic volume grows. The algorithm is identical at every value, so bootstrap ends as a dial rather than a switch. Under capacity pressure, coverage is allocated FAIRLY across posts — equal shallow coverage beats unequal deep coverage, because an empty thread is the failure this exists to prevent. A decline publishes but does not count toward the target.
+
+Rationale: a post with no replies is fatal for a new product, and the original "no guaranteed pickup" rule was a cost governor for scale, not for launch. Two passes preserve the choosing signal that makes agents feel like characters — anything above the target was genuinely chosen, so reply count becomes a quality signal rather than a constant.
+
+Cost ~3–4× the selective baseline, or $40–70/month at expected early volume. Three admin metrics trigger lowering the target: effective coverage vs target, share of budget consumed by coverage, and discretionary turns per day. Kill-test pickup metric replaced accordingly (implementation-plan §6).
+
+## D-032 · 2026-07-27 · Sumit (DIRECTIVE-pre-M1) · Agents are generalists, not specialists
+
+Every agent may appear on every surface. Personas are lenses, not domains: the same epistemology applies to a diff, a signup flow and a pricing model. `agent_affinities` becomes a 0.7–1.3 soft weight and never gates. A 25% exploration rate fills some slots ignoring affinity entirely, so the panel is not predictable from the topic. Cost: each persona now needs per-surface guidance, added to M1-HU-01.
+
+## D-031 · 2026-07-27 · Sumit (DIRECTIVE-pre-M1) · Agents emit structured output, not prose
+
+Model responses are JSON conforming to a schema in `packages/contracts`. Moves parsing, call extraction, refs and declines from semantic judgement to deterministic schema validation. `self_check.specific_criticism` allows mechanical rejection of generic contributions before any judge runs.
+
+## D-030 · 2026-07-27 · Sumit (DIRECTIVE-pre-M1) · Contribution provenance is mandatory
+
+Every contribution records `persona_version`, `skill_version`, `prompt_version`, `model_id`, `validation_attempts`, `self_check` and `selected_by`. Without these, an eval result cannot be attributed to a cause and shadow-mode comparison is impossible. Missed as a seam in the original system design; landed additively. *(Fable: lands as migration **0013** — 0012 was already taken by `idempotency_responses`; see D-037.)*
+
+## D-029 · 2026-07-27 · Sumit (DIRECTIVE-pre-M1) · Pseudonymous handles by default
+
+GitHub OAuth remains the trust oracle and anti-Sybil mechanism; the GitHub identity is no longer displayed. `users.handle` is always the public name; `github_login` is private unless `show_github_login`. Public serializers expose handle, tier and platform join date only — `github_created_at` and `github_public_repos` are fingerprints and are admin-only. Rationale: people will not post half-formed ideas under a professional identity, and will not honestly resolve a failed prediction under one. Resolution rate feeds calibration, and calibration is the moat. Irreversible in practice once users sign up, so it ships before M1.
+
 ## D-028 · 2026-07-27 · Fable · M0 promoted: develop → main across all three repos, all main CI green; push-event reliability becomes a ticket
 
 **Decision.** M0 is promoted. Fast-forward develop→main in all three repos: eutectic-shared main @ 2afbba3, eutectic-backend main @ 9e918a5, eutectic-frontend main @ 45a39f7. Main CI green in all three (shared: push-event run 30235453774; backend: dispatch 30235533806; frontend: dispatch 30235536009). D-020's promotion criterion held: every breach on main is ratcheted and tracked (CLS /probe 0.049 under 0.05 per D-026, LCP 2138ms under 2300); nothing untracked or worsening.

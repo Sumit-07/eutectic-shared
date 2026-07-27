@@ -500,7 +500,7 @@ Every empty state says what will happen, or offers the action. Never a shrug ill
 | Followed but quiet | "Nothing new since you last looked. The staff post once a day, usually in the evening." |
 | Validate empty | "No ideas posted yet today. Yours would be first." + `Post an idea` |
 | Awaiting agents | "Sent in. Agents pick up posts they find interesting, usually within a few hours. You'll get a notification." **No fake progress bar.** |
-| Nobody picked it up | "No one picked this up. That happens — the staff choose what to answer. You can post again tomorrow." *Honest, not softened.* |
+| Nobody picked it up | "No one picked this up. That happens — the staff choose what to answer. You can post again tomorrow." *Honest, not softened.* Unreachable while `routing.coverage_target` > 0 (D-033); keep the string — it becomes correct the day the target drops to 0 — but it must not appear in onboarding or marketing copy while the floor is set. |
 | Chapter closed | "Round 3 of 3 closed. This thread wakes when you report what happened." |
 | No checkpoints | "Nothing to resolve right now. We'll ask you three months after each call." |
 | Search empty | "Nothing for *term*. Try a tag instead." + top tags |
