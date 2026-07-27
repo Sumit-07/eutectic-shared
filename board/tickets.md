@@ -790,3 +790,25 @@ ACCEPTANCE
   - Every gate proven RED once in the PR body
 DEPENDS ON M0-SH-05 (done), M0-FE-13 (done, 8146082)
 ```
+
+## Wave 6 — M1 infra (groomed at M0 close, D-028)
+
+```
+ID M1-INF-01 · CI push-event reliability + main-run sibling pinning · SPEC D-025 §4, D-028 · MODEL Sonnet · RISK no
+ACCEPTANCE
+  - Root-cause why some push events produce no workflow run: backend develop
+    merge push (9e918a5) and the backend+frontend main promotion pushes all
+    silently produced nothing, while shared pushes and frontend develop
+    pushes trigger reliably. Triggers verified correct in all workflows.
+    Check: Actions settings per repo, delivery logs (gh api
+    /repos/{repo}/actions/runs vs the push timestamps), token/actor rules,
+    and any GitHub-side skip conditions.
+  - If the cause is external/irreproducible: add a belt-and-braces
+    workflow_dispatch step to the promotion protocol doc instead of code,
+    and record the finding in DECISIONS
+  - Weigh pinning sibling checkouts to the triggering ref class on main
+    runs (main run → siblings at main), per D-028 item 2; implement or
+    record the rejection with reasoning
+  - No behavior change to PR-event runs
+DEPENDS ON nothing (M1 can start anywhere)
+```

@@ -6,6 +6,16 @@ Format: `D-NNN · date · who · decision · why · what it forecloses`.
 
 ---
 
+## D-028 · 2026-07-27 · Fable · M0 promoted: develop → main across all three repos, all main CI green; push-event reliability becomes a ticket
+
+**Decision.** M0 is promoted. Fast-forward develop→main in all three repos: eutectic-shared main @ 2afbba3, eutectic-backend main @ 9e918a5, eutectic-frontend main @ 45a39f7. Main CI green in all three (shared: push-event run 30235453774; backend: dispatch 30235533806; frontend: dispatch 30235536009). D-020's promotion criterion held: every breach on main is ratcheted and tracked (CLS /probe 0.049 under 0.05 per D-026, LCP 2138ms under 2300); nothing untracked or worsening.
+
+Two operational rulings:
+1. **Push-event no-run recurred** — the backend and frontend main pushes produced no workflow runs (triggers verified correct; shared's identical push triggered fine; frontend develop pushes trigger fine). Second occurrence after D-025 item 4, so per that entry it is now a ticket: **M1-INF-01**, groomed in board/tickets.md. Until it lands, the promotion protocol includes "verify a run appeared for each main push; dispatch manually if not" — which is exactly what happened here, so validation coverage was never lost.
+2. **Known limitation, recorded not fixed:** every repo's CI pins siblings at develop (D-022), so a main run validates the promoted repo against sibling *develops*, not sibling mains. Harmless when promotion is near-simultaneous across repos (it was — minutes apart at identical SHAs); M1-INF-01 also weighs pinning siblings to the triggering ref class on main runs.
+
+**Forecloses.** Promoting one repo's main while its siblings' develops have moved past what it was built against; declaring a promotion validated without a green run per repo on main.
+
 ## D-027 · 2026-07-27 · Fable · M0-FE-14 accepted: all three repos have real CI; M0 is code-complete
 
 **Decision.** M0-FE-14 merged (eutectic-frontend develop @ 45a39f7, PR #13). Frontend CI runs the full 11-gate battery on ubuntu-latest — Lighthouse under headless Chrome, the D-026 CLS ratchet (0.04938935… measured under the 0.05 ratchet), framework baseline 102.0/102 exact — with six Linux visual-regression baselines committed and the missing-baseline skip path retired into a hard failure. Green twice on independent triggers: PR event (run 30234912657) and the first-ever push-event run on frontend develop (30235248684). All 11 gates proven red with run IDs and failing lines tabled in the PR body; sabotage commits reverted, final tree byte-identical to pre-sabotage. CTO-FE's merge battery included patch-id verification of the pre-approved ratchet edit, a no-other-ratchet-moved sweep, and a quantitative cross-platform check (Linux light-vs-dark pixel signature identical to darwin's — theme rendering is platform-independent). Fable-validated by spot-check of the merged tree (ratchet + D-026 note, baselines, reconstruction recipe, gitignore).
