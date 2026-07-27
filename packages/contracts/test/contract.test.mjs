@@ -184,10 +184,11 @@ test('agent ink is a token name, never a hex value', () => {
   );
 });
 
-test('GitHub-derived identity fields exist only on AdminUser (D-029)', () => {
-  // The one-way door: outside AdminUser (admin-only, /v1/admin/* — P-09),
-  // no schema, response or example may carry a fingerprint field. `email`
-  // does not exist anywhere yet; the assertion keeps it that way.
+test('GitHub-derived identity fields exist only on the AdminUser family (D-029)', () => {
+  // The one-way door: outside the AdminUser family (the schema and the one
+  // response component that serves it, both reachable only from /admin/* —
+  // P-09), no schema, response or example may carry a fingerprint field.
+  // `email` does not exist anywhere yet; the assertion keeps it that way.
   const schemasHeader = findLine(/^ {2}schemas:\s*$/);
   const schemas = keyedBlocks(schemasHeader, 4);
   const adminBlock = schemas.get('AdminUser');
@@ -195,12 +196,40 @@ test('GitHub-derived identity fields exist only on AdminUser (D-029)', () => {
   for (const field of ['github_id', 'github_created_at', 'github_public_repos', 'tier_would_be']) {
     assert.match(adminBlock, new RegExp(`^\\s+${field}:`, 'm'), `AdminUser lost ${field}`);
   }
-  const outsideAdmin = yaml.replace(adminBlock, '');
+  const componentsIndex = findLine(/^components:\s*$/);
+  const responsesHeader = lines.findIndex(
+    (line, index) => index > componentsIndex && /^ {2}responses:\s*$/.test(line),
+  );
+  const adminResponse = keyedBlocks(responsesHeader, 4).get('AdminUserResponse');
+  assert.ok(adminResponse, 'AdminUserResponse component missing (P-09)');
+  const outsideAdmin = yaml.replace(adminBlock, '').replace(adminResponse, '');
   assert.doesNotMatch(
     outsideAdmin,
     /^\s+(github_id|github_created_at|github_public_repos|tier_would_be|email):/m,
-    'an admin-only identity field leaked outside AdminUser (D-029)',
+    'an admin-only identity field leaked outside the AdminUser family (D-029)',
   );
+});
+
+test('AdminUser is reachable only under /admin/* (D-029, P-09)', () => {
+  // Belt to the leak test's braces: the schema has exactly one inbound ref
+  // (its response component), and no operation outside /admin/* touches
+  // anything Admin-named.
+  const schemaRefs = lines.filter((line) =>
+    line.includes('#/components/schemas/AdminUser'),
+  );
+  assert.equal(
+    schemaRefs.length,
+    1,
+    'AdminUser must be referenced exactly once, from AdminUserResponse',
+  );
+  for (const op of operations) {
+    if (op.path.startsWith('/admin/')) continue;
+    assert.doesNotMatch(
+      operationBlock(op),
+      /AdminUser/,
+      `${op.method.toUpperCase()} ${op.path} references AdminUser outside /admin/*`,
+    );
+  }
 });
 
 test('no hex colour appears anywhere in the contract', () => {

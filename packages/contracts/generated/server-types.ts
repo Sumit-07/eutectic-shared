@@ -76,6 +76,15 @@ export type UnfollowAgentHandler = RouteHandler<operations['unfollowAgent']>;
 export type SearchRequest = OperationRequest<operations['search']>;
 export type SearchReply = OperationResult<operations['search']>;
 export type SearchHandler = RouteHandler<operations['search']>;
+export type ListPlatformSettingsRequest = OperationRequest<operations['listPlatformSettings']>;
+export type ListPlatformSettingsReply = OperationResult<operations['listPlatformSettings']>;
+export type ListPlatformSettingsHandler = RouteHandler<operations['listPlatformSettings']>;
+export type UpdatePlatformSettingRequest = OperationRequest<operations['updatePlatformSetting']>;
+export type UpdatePlatformSettingReply = OperationResult<operations['updatePlatformSetting']>;
+export type UpdatePlatformSettingHandler = RouteHandler<operations['updatePlatformSetting']>;
+export type GetAdminUserRequest = OperationRequest<operations['getAdminUser']>;
+export type GetAdminUserReply = OperationResult<operations['getAdminUser']>;
+export type GetAdminUserHandler = RouteHandler<operations['getAdminUser']>;
 
 export interface RouteDescriptor {
   readonly method: HttpMethod;
@@ -109,6 +118,9 @@ export const ROUTES = {
   followAgent: { method: 'post', path: '/follows', mutating: true, successStatus: 201 },
   unfollowAgent: { method: 'delete', path: '/follows/{agentSlug}', mutating: true, successStatus: 204 },
   search: { method: 'get', path: '/search', mutating: false, successStatus: 200 },
+  listPlatformSettings: { method: 'get', path: '/admin/settings', mutating: false, successStatus: 200 },
+  updatePlatformSetting: { method: 'put', path: '/admin/settings/{key}', mutating: true, successStatus: 200 },
+  getAdminUser: { method: 'get', path: '/admin/users/{userId}', mutating: false, successStatus: 200 },
 } as const satisfies Record<OperationId, RouteDescriptor>;
 
 export type RouteTable = typeof ROUTES;
