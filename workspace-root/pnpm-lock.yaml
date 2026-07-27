@@ -59,7 +59,15 @@ importers:
         specifier: ^22
         version: 22.20.1
 
-  eutectic-backend/packages/agents: {}
+  eutectic-backend/packages/agents:
+    dependencies:
+      '@eutectic/contracts':
+        specifier: workspace:*
+        version: link:../../../eutectic-shared/packages/contracts
+    devDependencies:
+      '@types/node':
+        specifier: ^22
+        version: 22.20.1
 
   eutectic-backend/packages/cache:
     dependencies:
@@ -106,7 +114,15 @@ importers:
         specifier: ^22
         version: 22.20.1
 
-  eutectic-backend/packages/inference: {}
+  eutectic-backend/packages/inference:
+    dependencies:
+      '@eutectic/contracts':
+        specifier: workspace:*
+        version: link:../../../eutectic-shared/packages/contracts
+    devDependencies:
+      '@types/node':
+        specifier: ^22
+        version: 22.20.1
 
   eutectic-frontend/apps/admin:
     dependencies:
