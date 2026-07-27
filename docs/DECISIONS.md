@@ -6,6 +6,27 @@ Format: `D-NNN · date · who · decision · why · what it forecloses`.
 
 ---
 
+## D-042 · 2026-07-27 · Fable · Wave 7 batch-1 backend rulings; lockstep window sequenced behind P-08 Phase 1
+
+**Decision.** Rulings requested by CTO-Backend on the reviewed-and-approved batch (PRs #23–#28, eutectic-backend):
+
+1. **`selected_by` vocabulary is the D-033 set** — `'coverage' | 'discretionary' | 'exploration'`, CHECK-constrained, `NOT NULL`. The directive §2 comment (`'scored'|'exploration'|'floor'`) is a stale earlier draft of the same idea and is superseded by §4/D-033. In 0013: `ADD COLUMN ... NOT NULL DEFAULT 'coverage'` to satisfy existing (pre-routing, dev-only) rows, then `ALTER COLUMN ... DROP DEFAULT` in the same migration — the turn worker must always write the value explicitly; a missing write should fail at insert, not silently default.
+2. **`docs/testing-and-evals.md` does not exist and Fable will not author its content.** The banned-phrase list the directive cites (§5 Layer 2) is eval taste — human-owned under CLAUDE.md §11, same class as M1-HU-02. Interim rule: any Layer-2 phrase check ships wired but **empty** (list read from a data file, zero entries), and nothing may hard-code an invented list. Added to the missing-inputs list for Sumit.
+3. **Tombstone fail-closed confirmed** — `github_login` is nulled on tombstone regardless of the opt-in flag; frontends render tombstoned users as "account closed" (PublicUser, `deleted: true`, never a 404). Relayed to CTO-Frontend as the rendering contract.
+4. **D-023 lockfile-mirror timing.** Both manifest commits (0a65fd7, 2604ef1) pass rule-12 review: workspace-internal `@eutectic/contracts` plus `@types/node` dev-only; the Anthropic adapter uses native fetch, no SDK. But because CI reconstruction runs `pnpm install --frozen-lockfile`, landing the mirror before backend develop carries the manifests turns every *other* repo's CI red for the window. The backend merge sequence is blocked on a human action anyway, so the window opens at whichever comes first: P-08 Phase 1 merges, or the backend merge block clears. Fable coordinates both CTOs at that moment.
+
+Backlog groomed: `.env.example` INFERENCE_* vars (P-B-01) and the `Exact<>` idiom upgrade in handlers.ts/worker (P-B-02).
+
+**Forecloses.** A hard-coded banned-phrase list authored by an agent; a lockstep window opened while an unrelated domain PR is mid-merge.
+
+## D-041 · 2026-07-27 · Fable · One-tap GitHub handle is a server-side sentinel; client-component ceiling 6 → 7
+
+**Decision.** CTO-Frontend's P-08 escalation is ruled Option B: `PUT /me/handle` accepts `{use_github_login: true}` (HandleUpdate is now a `oneOf` over two closed variants, merged to shared develop @ f9317c9). The server sets handle = lowercase(caller's own `github_login`) entirely server-side — the login string never crosses the wire in either direction, the strongest D-029 posture — and the unchanged 409/422 rules apply, a grammar miss surfacing as `422` reason `invalid`. Option A (a `Me` schema exposing the caller's own identity on `/auth/session`) is *not* taken now; it is severable and may be groomed later solely for settings' proactive cooldown display.
+
+The client-component ratchet rises **6 → 7** (supersedes D-018's count, not its principle): one shared `handle-form.tsx` leaf serving both `/welcome/handle` and `/settings`, per CTO-Frontend's recommendation. The constant change (`TOTAL_CEILING` in `check-client-components.mjs`) lands in the same frontend PR that adds the leaf, per rule 13. P-08 Phase 1's interim copy-only affordance stands until the sentinel is implemented server-side (ticket P-08-BE).
+
+**Forecloses.** The caller's `github_login` reaching any client to satisfy this affordance; an eighth client leaf without a new DECISIONS entry.
+
 ## D-040 · 2026-07-27 · Fable · P-09 contract prelude merged: /admin/* exists, AdminUser reachable only there
 
 **Decision.** The admin path family is in the contract (shared develop; branch `contracts/pre-m1-p09-admin` @ 7aa7d0e): `GET /admin/settings` (unpaginated by design — seeded, bounded set), `PUT /admin/settings/{key}` (404 on unknown key, never an upsert; 422 on type/range violation; every write audited to `admin_audit` — server behavior, documented not payloaded), `GET /admin/users/{userId}` (the only route serving AdminUser; returns tombstoned users with `deleted: true`, unlike PublicUser's account-closed rendering). No new auth scheme: the same session cookie, allowlist gating documented at the tag level, 403 for a session off the allowlist.

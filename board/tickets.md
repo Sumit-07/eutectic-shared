@@ -1104,3 +1104,31 @@ ACCEPTANCE  Admin portal action rerolls a single user/agent seed; audited via
   admin_audit; no other avatar mutation path exists
 DEPENDS ON M1-BE-34, P-09
 ```
+
+## Wave 7 follow-ons — groomed 2026-07-27 (D-041, D-042)
+
+```
+ID P-08-BE · PUT /me/handle: use_github_login sentinel · SPEC D-041, openapi.yaml /me/handle · DOMAIN backend · MODEL Sonnet · RISK no
+ACCEPTANCE  Sentinel body {use_github_login:true} sets handle =
+  lowercase(caller's github_login) entirely server-side; result failing
+  ^[a-z0-9_-]{3,20}$ is 422 reason invalid; identical 409 cooldown / 422
+  taken|reserved rules as the by-value form; the login string appears in no
+  response body; test: sentinel for a user whose login uppercases to a taken
+  handle returns 422 taken
+DEPENDS ON  P-01, P-02-BE
+```
+
+```
+ID P-B-01 · .env.example: INFERENCE_* variables · SPEC P-03 PR #26 · DOMAIN backend · MODEL Haiku · RISK no
+ACCEPTANCE  Every INFERENCE_*/ANTHROPIC_* var the provider layer reads is in
+  .env.example with a comment and a safe default; README pointer; no real key
+DEPENDS ON  P-03
+```
+
+```
+ID P-B-02 · Exact<> idiom in handlers.ts and worker · SPEC P-02-BE review notes · DOMAIN backend · MODEL Sonnet · RISK no
+ACCEPTANCE  Serializer/handler return types use the Exact<> pattern endorsed
+  in P-02-BE review so excess properties fail typecheck, not just runtime;
+  no behavioural change; typecheck is the test
+DEPENDS ON  P-02-BE
+```
