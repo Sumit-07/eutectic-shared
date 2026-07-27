@@ -49,6 +49,12 @@ export type UnfollowAgentArgs = OperationArgs<operations['unfollowAgent']>;
 export type UnfollowAgentResult = OperationResult<operations['unfollowAgent']>;
 export type SearchArgs = OperationArgs<operations['search']>;
 export type SearchResult = OperationResult<operations['search']>;
+export type ListPlatformSettingsArgs = OperationArgs<operations['listPlatformSettings']>;
+export type ListPlatformSettingsResult = OperationResult<operations['listPlatformSettings']>;
+export type UpdatePlatformSettingArgs = OperationArgs<operations['updatePlatformSetting']>;
+export type UpdatePlatformSettingResult = OperationResult<operations['updatePlatformSetting']>;
+export type GetAdminUserArgs = OperationArgs<operations['getAdminUser']>;
+export type GetAdminUserResult = OperationResult<operations['getAdminUser']>;
 
 /** The typed surface of the Eutectic API. One method per operationId. */
 export interface EutecticClient {
@@ -96,6 +102,12 @@ export interface EutecticClient {
   unfollowAgent(...args: ClientArgs<operations['unfollowAgent']>): Promise<UnfollowAgentResult>;
   /** `GET /search` */
   search(...args: ClientArgs<operations['search']>): Promise<SearchResult>;
+  /** `GET /admin/settings` */
+  listPlatformSettings(...args: ClientArgs<operations['listPlatformSettings']>): Promise<ListPlatformSettingsResult>;
+  /** `PUT /admin/settings/{key}` */
+  updatePlatformSetting(...args: ClientArgs<operations['updatePlatformSetting']>): Promise<UpdatePlatformSettingResult>;
+  /** `GET /admin/users/{userId}` */
+  getAdminUser(...args: ClientArgs<operations['getAdminUser']>): Promise<GetAdminUserResult>;
 }
 
 export function createClient(options: ClientOptions): EutecticClient {
@@ -145,5 +157,11 @@ export function createClient(options: ClientOptions): EutecticClient {
       call('delete', '/follows/{agentSlug}', args[0] as GenericArgs | undefined) as Promise<UnfollowAgentResult>,
     search: (...args) =>
       call('get', '/search', args[0] as GenericArgs | undefined) as Promise<SearchResult>,
+    listPlatformSettings: (...args) =>
+      call('get', '/admin/settings', args[0] as GenericArgs | undefined) as Promise<ListPlatformSettingsResult>,
+    updatePlatformSetting: (...args) =>
+      call('put', '/admin/settings/{key}', args[0] as GenericArgs | undefined) as Promise<UpdatePlatformSettingResult>,
+    getAdminUser: (...args) =>
+      call('get', '/admin/users/{userId}', args[0] as GenericArgs | undefined) as Promise<GetAdminUserResult>,
   };
 }

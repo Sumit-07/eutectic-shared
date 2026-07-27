@@ -440,6 +440,87 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every platform setting
+         * @description The full `platform_settings` table (DIRECTIVE-pre-M1 §3). Deliberately
+         *     unpaginated: the set is seeded, admin-curated and bounded at a few
+         *     dozen rows — a cursor here would cost every caller a loop to render
+         *     one settings page. Admin-allowlist-gated: a session not on the
+         *     allowlist is a `403`.
+         */
+        get: operations["listPlatformSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/settings/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Dotted setting key, e.g. `routing.coverage_target`. Seeded, never created via the API. */
+                key: components["parameters"]["SettingKey"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change one platform setting
+         * @description Sets the value of an existing setting. Settings are seeded by
+         *     migration and never created through this API — an unknown key is a
+         *     `404`, not an upsert. The value must match the row's `value_type` and
+         *     sit inside `min_value`/`max_value` where those are non-null; a wrong
+         *     type or an out-of-range value is a `422`. Every accepted write is
+         *     appended to `admin_audit` with the before and after values — that is
+         *     server behaviour, not a field on this payload. Admin-allowlist-gated:
+         *     a session not on the allowlist is a `403`.
+         */
+        put: operations["updatePlatformSetting"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: components["parameters"]["UserId"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The admin view of a user
+         * @description The full `AdminUser` shape, GitHub-derived fields included — reachable
+         *     only here (D-029). Unlike `PublicUser`, which renders a tombstoned
+         *     user as "account closed" and never 404s, this route DOES return
+         *     tombstoned users with `deleted: true` — admins see the record. `404`
+         *     means the id has never existed. Admin-allowlist-gated: a session not
+         *     on the allowlist is a `403`.
+         */
+        get: operations["getAdminUser"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -562,8 +643,9 @@ export interface components {
         /**
          * @description The admin view of a human: every PublicUser field plus the
          *     GitHub-derived ones (D-029). Referenced only under the `/v1/admin/*`
-         *     path family, which lands with P-09's settings routes — until then
-         *     this schema is deliberately unreferenced. Written as a standalone
+         *     path family (P-09) — reachable from `GET /admin/users/{userId}` and
+         *     nowhere else. Unlike PublicUser, a tombstoned user is returned here
+         *     with `deleted: true` — admins see the record. Written as a standalone
          *     object rather than an `allOf` over PublicUser because PublicUser sets
          *     `additionalProperties: false` — the by-construction leak guarantee —
          *     and an `allOf` branch carrying extra fields would contradict it.
@@ -939,6 +1021,51 @@ export interface components {
             items: components["schemas"]["SearchHit"][];
             page: components["schemas"]["PageInfo"];
         };
+        /**
+         * @description Dotted setting key. The set of keys is seeded by migration
+         *     (DIRECTIVE-pre-M1 §3) and never grows through the API.
+         * @example routing.coverage_target
+         */
+        SettingKeyName: string;
+        /** @enum {string} */
+        SettingValueType: "bool" | "int" | "float";
+        /**
+         * @description One row of `platform_settings` (DIRECTIVE-pre-M1 §2, §3): a generic,
+         *     admin-controlled, audited key-value store. `value` is JSON and must
+         *     match `value_type`; `min_value`/`max_value` bound numeric settings and
+         *     are null where a bound makes no sense. `updated_by` is null for a row
+         *     no admin has ever touched (the seeded state).
+         */
+        PlatformSetting: {
+            key: components["schemas"]["SettingKeyName"];
+            /**
+             * @description The current value — any JSON, constrained by `value_type` at
+             *     write time, deliberately untyped here.
+             */
+            value: unknown;
+            value_type: components["schemas"]["SettingValueType"];
+            /** @description Operator-facing meaning of the knob. Rendered verbatim in the admin UI. */
+            description: string;
+            min_value: number | null;
+            max_value: number | null;
+            updated_by: components["schemas"]["Id"] | null;
+            updated_at: components["schemas"]["Timestamp"];
+        };
+        PlatformSettingUpdate: {
+            /**
+             * @description The new value. Must match the row's `value_type` and its
+             *     `min_value`/`max_value` range — otherwise `422`.
+             */
+            value: unknown;
+        };
+        /**
+         * @description The whole table in one page. Deliberately no `PageInfo`: the set is
+         *     seeded and bounded at a few dozen rows, and the admin settings page
+         *     renders all of it at once.
+         */
+        PlatformSettingList: {
+            items: components["schemas"]["PlatformSetting"][];
+        };
     };
     responses: {
         /** @description The caller's session. */
@@ -1076,6 +1203,36 @@ export interface components {
                 "application/vnd.staffroom.v1+json": components["schemas"]["SearchPage"];
             };
         };
+        /** @description Every platform setting. Small and bounded — no pagination. */
+        PlatformSettingListResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/vnd.staffroom.v1+json": components["schemas"]["PlatformSettingList"];
+            };
+        };
+        /** @description The setting after the write, as the table now holds it. */
+        PlatformSettingResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/vnd.staffroom.v1+json": components["schemas"]["PlatformSetting"];
+            };
+        };
+        /**
+         * @description The admin view of a user (D-029). The only response in this API that
+         *     carries GitHub-derived identity.
+         */
+        AdminUserResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/vnd.staffroom.v1+json": components["schemas"]["AdminUser"];
+            };
+        };
         /** @description Malformed request. */
         BadRequest: {
             headers: {
@@ -1094,7 +1251,10 @@ export interface components {
                 "application/vnd.staffroom.v1+json": components["schemas"]["Error"];
             };
         };
-        /** @description Authenticated, but not allowed — usually an entitlement ceiling. */
+        /**
+         * @description Authenticated, but not allowed — an entitlement ceiling, or on
+         *     `/admin/*` a session that is not on the admin allowlist.
+         */
         Forbidden: {
             headers: {
                 [name: string]: unknown;
@@ -1198,6 +1358,9 @@ export interface components {
         ThreadId: components["schemas"]["Id"];
         ContributionId: components["schemas"]["Id"];
         AgentSlug: components["schemas"]["Slug"];
+        /** @description Dotted setting key, e.g. `routing.coverage_target`. Seeded, never created via the API. */
+        SettingKey: components["schemas"]["SettingKeyName"];
+        UserId: components["schemas"]["Id"];
     };
     requestBodies: never;
     headers: never;
@@ -1746,6 +1909,78 @@ export interface operations {
         responses: {
             200: components["responses"]["SearchPageResponse"];
             400: components["responses"]["BadRequest"];
+            406: components["responses"]["NotAcceptable"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listPlatformSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["PlatformSettingListResponse"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            406: components["responses"]["NotAcceptable"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    updatePlatformSetting: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description Client-generated key, unique per logical operation (system-design §3).
+                 *     Replaying a key returns the original result; reusing a key with a
+                 *     different body is a `409`.
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Dotted setting key, e.g. `routing.coverage_target`. Seeded, never created via the API. */
+                key: components["parameters"]["SettingKey"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformSettingUpdate"];
+            };
+        };
+        responses: {
+            200: components["responses"]["PlatformSettingResponse"];
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            406: components["responses"]["NotAcceptable"];
+            409: components["responses"]["IdempotencyConflict"];
+            422: components["responses"]["UnprocessableEntity"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getAdminUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: components["parameters"]["UserId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["AdminUserResponse"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             406: components["responses"]["NotAcceptable"];
             429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalError"];

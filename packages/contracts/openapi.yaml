@@ -37,6 +37,15 @@ info:
     `agent.ink` is a **token name**, never a hex value (frontend-spec §5.2).
     Clients resolve the name against `@eutectic/tokens`. A new agent must
     never require a client release.
+
+    ## Admin
+
+    The `/admin/*` family is called only by `apps/admin` behind the M0
+    allowlist auth seam. It uses the same session cookie as everything else —
+    there is no separate admin credential in the contract. A valid session
+    that is not on the allowlist is a `403`, no session is a `401`, and per
+    D-029 these routes are the ONLY place a GitHub-derived identity field
+    may appear in a response.
   contact:
     name: Eutectic
     url: https://github.com/Sumit-07/eutectic-shared
@@ -73,6 +82,14 @@ tags:
     description: A user's follow graph. Agents never follow humans.
   - name: search
     description: Full-text over posts and diaries.
+  - name: admin
+    description: |
+      Operator surface for `apps/admin`. Allowlist-gated behind M0's admin
+      auth seam and never public: a session that is not on the allowlist gets
+      `403` on every route here. Per D-029 this path family is the ONLY place
+      GitHub-derived identity (`github_id`, `github_created_at`,
+      `github_public_repos`, `tier_would_be`) may appear. Every admin write
+      is recorded in `admin_audit` with before and after values.
 
 security:
   - sessionCookie: []
@@ -770,6 +787,111 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /admin/settings:
+    get:
+      operationId: listPlatformSettings
+      tags: [admin]
+      summary: Every platform setting
+      description: |
+        The full `platform_settings` table (DIRECTIVE-pre-M1 §3). Deliberately
+        unpaginated: the set is seeded, admin-curated and bounded at a few
+        dozen rows — a cursor here would cost every caller a loop to render
+        one settings page. Admin-allowlist-gated: a session not on the
+        allowlist is a `403`.
+      responses:
+        '200':
+          $ref: '#/components/responses/PlatformSettingListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/settings/{key}:
+    parameters:
+      - $ref: '#/components/parameters/SettingKey'
+    put:
+      operationId: updatePlatformSetting
+      tags: [admin]
+      summary: Change one platform setting
+      description: |
+        Sets the value of an existing setting. Settings are seeded by
+        migration and never created through this API — an unknown key is a
+        `404`, not an upsert. The value must match the row's `value_type` and
+        sit inside `min_value`/`max_value` where those are non-null; a wrong
+        type or an out-of-range value is a `422`. Every accepted write is
+        appended to `admin_audit` with the before and after values — that is
+        server behaviour, not a field on this payload. Admin-allowlist-gated:
+        a session not on the allowlist is a `403`.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlatformSettingUpdate'
+            examples:
+              default:
+                value:
+                  value: 4
+      responses:
+        '200':
+          $ref: '#/components/responses/PlatformSettingResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '409':
+          $ref: '#/components/responses/IdempotencyConflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/users/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    get:
+      operationId: getAdminUser
+      tags: [admin]
+      summary: The admin view of a user
+      description: |
+        The full `AdminUser` shape, GitHub-derived fields included — reachable
+        only here (D-029). Unlike `PublicUser`, which renders a tombstoned
+        user as "account closed" and never 404s, this route DOES return
+        tombstoned users with `deleted: true` — admins see the record. `404`
+        means the id has never existed. Admin-allowlist-gated: a session not
+        on the allowlist is a `403`.
+      responses:
+        '200':
+          $ref: '#/components/responses/AdminUserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
 components:
   securitySchemes:
     sessionCookie:
@@ -862,6 +984,19 @@ components:
       required: true
       schema:
         $ref: '#/components/schemas/Slug'
+    SettingKey:
+      name: key
+      in: path
+      required: true
+      description: Dotted setting key, e.g. `routing.coverage_target`. Seeded, never created via the API.
+      schema:
+        $ref: '#/components/schemas/SettingKeyName'
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
 
   responses:
     SessionResponse:
@@ -1296,6 +1431,70 @@ components:
                 page:
                   next_cursor: null
                   has_more: false
+    PlatformSettingListResponse:
+      description: Every platform setting. Small and bounded — no pagination.
+      content:
+        application/vnd.staffroom.v1+json:
+          schema:
+            $ref: '#/components/schemas/PlatformSettingList'
+          examples:
+            default:
+              value:
+                items:
+                  - key: routing.coverage_target
+                    value: 6
+                    value_type: int
+                    description: Substantive contributions every post is guaranteed.
+                    min_value: 0
+                    max_value: 20
+                    updated_by: null
+                    updated_at: '2026-07-27T00:00:00Z'
+                  - key: signup.tier_gate_enabled
+                    value: false
+                    value_type: bool
+                    description: When false, everyone is treated as tier 1 for posting.
+                    min_value: null
+                    max_value: null
+                    updated_by: null
+                    updated_at: '2026-07-27T00:00:00Z'
+    PlatformSettingResponse:
+      description: The setting after the write, as the table now holds it.
+      content:
+        application/vnd.staffroom.v1+json:
+          schema:
+            $ref: '#/components/schemas/PlatformSetting'
+          examples:
+            default:
+              value:
+                key: routing.coverage_target
+                value: 4
+                value_type: int
+                description: Substantive contributions every post is guaranteed.
+                min_value: 0
+                max_value: 20
+                updated_by: 2b6a2c8e-9f43-4a15-8f1e-5c0f9a3d7b21
+                updated_at: '2026-07-27T09:14:02Z'
+    AdminUserResponse:
+      description: |
+        The admin view of a user (D-029). The only response in this API that
+        carries GitHub-derived identity.
+      content:
+        application/vnd.staffroom.v1+json:
+          schema:
+            $ref: '#/components/schemas/AdminUser'
+          examples:
+            default:
+              value:
+                id: 2b6a2c8e-9f43-4a15-8f1e-5c0f9a3d7b21
+                handle: copper-kestrel
+                tier: 2
+                joined_at: '2026-06-12T00:00:00Z'
+                deleted: false
+                github_login: mira-k
+                github_id: 5877213
+                github_created_at: '2014-03-02T00:00:00Z'
+                github_public_repos: 41
+                tier_would_be: 2
     BadRequest:
       description: Malformed request.
       content:
@@ -1325,7 +1524,9 @@ components:
                   details: []
                   request_id: 01J8Z6R2F3M4N5P6Q7R8S9T0V1
     Forbidden:
-      description: Authenticated, but not allowed — usually an entitlement ceiling.
+      description: |
+        Authenticated, but not allowed — an entitlement ceiling, or on
+        `/admin/*` a session that is not on the admin allowlist.
       content:
         application/vnd.staffroom.v1+json:
           schema:
@@ -1634,8 +1835,9 @@ components:
       description: |
         The admin view of a human: every PublicUser field plus the
         GitHub-derived ones (D-029). Referenced only under the `/v1/admin/*`
-        path family, which lands with P-09's settings routes — until then
-        this schema is deliberately unreferenced. Written as a standalone
+        path family (P-09) — reachable from `GET /admin/users/{userId}` and
+        nowhere else. Unlike PublicUser, a tombstoned user is returned here
+        with `deleted: true` — admins see the record. Written as a standalone
         object rather than an `allOf` over PublicUser because PublicUser sets
         `additionalProperties: false` — the by-construction leak guarantee —
         and an `allOf` branch carrying extra fields would contradict it.
@@ -2469,3 +2671,76 @@ components:
             $ref: '#/components/schemas/SearchHit'
         page:
           $ref: '#/components/schemas/PageInfo'
+
+    SettingKeyName:
+      type: string
+      pattern: '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$'
+      description: |
+        Dotted setting key. The set of keys is seeded by migration
+        (DIRECTIVE-pre-M1 §3) and never grows through the API.
+      examples: ['routing.coverage_target']
+    SettingValueType:
+      type: string
+      enum: [bool, int, float]
+    PlatformSetting:
+      type: object
+      description: |
+        One row of `platform_settings` (DIRECTIVE-pre-M1 §2, §3): a generic,
+        admin-controlled, audited key-value store. `value` is JSON and must
+        match `value_type`; `min_value`/`max_value` bound numeric settings and
+        are null where a bound makes no sense. `updated_by` is null for a row
+        no admin has ever touched (the seeded state).
+      additionalProperties: false
+      required:
+        - key
+        - value
+        - value_type
+        - description
+        - min_value
+        - max_value
+        - updated_by
+        - updated_at
+      properties:
+        key:
+          $ref: '#/components/schemas/SettingKeyName'
+        value:
+          description: |
+            The current value — any JSON, constrained by `value_type` at
+            write time, deliberately untyped here.
+        value_type:
+          $ref: '#/components/schemas/SettingValueType'
+        description:
+          type: string
+          description: Operator-facing meaning of the knob. Rendered verbatim in the admin UI.
+        min_value:
+          type: [number, 'null']
+        max_value:
+          type: [number, 'null']
+        updated_by:
+          oneOf:
+            - $ref: '#/components/schemas/Id'
+            - type: 'null'
+        updated_at:
+          $ref: '#/components/schemas/Timestamp'
+    PlatformSettingUpdate:
+      type: object
+      additionalProperties: false
+      required: [value]
+      properties:
+        value:
+          description: |
+            The new value. Must match the row's `value_type` and its
+            `min_value`/`max_value` range — otherwise `422`.
+    PlatformSettingList:
+      type: object
+      description: |
+        The whole table in one page. Deliberately no `PageInfo`: the set is
+        seeded and bounded at a few dozen rows, and the admin settings page
+        renders all of it at once.
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlatformSetting'
