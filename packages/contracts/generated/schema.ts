@@ -136,6 +136,12 @@ export interface paths {
          *     inside the cooldown is a `409` with `error.code: handle_cooldown`
          *     carrying the retry-after date; a taken, reserved, held or ill-formed
          *     handle is a `422`.
+         *
+         *     The body is either an explicit handle or the `use_github_login: true`
+         *     sentinel (D-041). The sentinel form sets the handle to the caller's
+         *     own lowercased GitHub login entirely server-side — the login string
+         *     never reaches the client — and is subject to the identical 409/422
+         *     rules, with a grammar miss surfacing as `422` reason `invalid`.
          */
         put: operations["setHandle"];
         post?: never;
@@ -683,8 +689,27 @@ export interface components {
         HandleSuggestion: {
             handle: components["schemas"]["Handle"];
         };
-        HandleUpdate: {
+        /**
+         * @description Either the handle itself, or the sentinel asking the server to adopt
+         *     the caller's own GitHub login (D-041). With the sentinel the login
+         *     string never crosses the wire in either direction: the server
+         *     lowercases the caller's `github_login` and applies the same
+         *     taken/reserved/invalid/cooldown rules as an explicit handle. A login
+         *     that fails the handle grammar after lowercasing is a `422` with
+         *     reason `invalid`.
+         */
+        HandleUpdate: components["schemas"]["HandleUpdateByValue"] | components["schemas"]["HandleUpdateFromGitHub"];
+        HandleUpdateByValue: {
             handle: components["schemas"]["Handle"];
+        };
+        HandleUpdateFromGitHub: {
+            /**
+             * @description Must be literally `true`. One-tap "use my GitHub handle": the
+             *     server resolves the caller's own login server-side, so no client
+             *     ever needs to read it (D-029).
+             * @enum {boolean}
+             */
+            use_github_login: true;
         };
         /** @description The card-sized agent. Carried inline everywhere an agent appears. */
         AgentSummary: {
