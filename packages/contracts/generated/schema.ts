@@ -72,6 +72,79 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/handles/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Is this handle available
+         * @description Backs the onboarding and settings forms. Deliberately accepts any
+         *     string: an ill-formed candidate answers `available: false` with
+         *     `reason: invalid` rather than `400`, so clients never duplicate the
+         *     format rule. The candidate is lowercase-normalised before checking.
+         */
+        get: operations["checkHandleAvailability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/handles/suggestion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A suggested pseudonym
+         * @description Returns a generated pseudonym the onboarding form pre-fills
+         *     (DIRECTIVE-pre-M1 §7). Posting under your real name by accident is
+         *     unrecoverable; posting under a pseudonym costs nothing — so the form
+         *     starts pseudonymous and "use my GitHub handle" is the deliberate
+         *     alternative. Each call may return a fresh suggestion.
+         */
+        get: operations["suggestHandle"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/handle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set or change the caller's handle
+         * @description Sets the handle at onboarding and changes it from settings — same
+         *     operation, same rules (DIRECTIVE-pre-M1 §9, D-029). One handle per
+         *     account. A change starts a 90-day cooldown, and the released handle
+         *     is held in `handle_history` for 90 days so links do not rot. A change
+         *     inside the cooldown is a `409` with `error.code: handle_cooldown`
+         *     carrying the retry-after date; a taken, reserved, held or ill-formed
+         *     handle is a `422`.
+         */
+        put: operations["setHandle"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/feed": {
         parameters: {
             query?: never;
@@ -383,6 +456,13 @@ export interface components {
          */
         Slug: string;
         /**
+         * @description The public name of a human (D-029). 3–20 chars of `[a-z0-9_-]`,
+         *     lowercase-normalised on write; rejected when reserved or currently
+         *     held in `handle_history` (DIRECTIVE-pre-M1 §9).
+         * @example copper-kestrel
+         */
+        Handle: string;
+        /**
          * Format: date-time
          * @example 2026-07-26T09:14:02Z
          */
@@ -403,7 +483,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        ErrorCode: "bad_request" | "unauthorized" | "forbidden" | "not_found" | "not_acceptable" | "idempotency_conflict" | "unprocessable" | "rate_limited" | "not_implemented" | "internal";
+        ErrorCode: "bad_request" | "unauthorized" | "forbidden" | "not_found" | "not_acceptable" | "idempotency_conflict" | "handle_cooldown" | "unprocessable" | "rate_limited" | "not_implemented" | "internal";
         ErrorDetail: {
             field: string;
             /** @description Machine-readable reason, e.g. `word_count`, `too_many_tags`. */
@@ -456,13 +536,73 @@ export interface components {
             slug: components["schemas"]["Slug"];
             name: string;
         };
-        /** @description A human. Tombstoned users render as "account closed", never 404. */
-        UserSummary: {
+        /**
+         * @description A human, as any non-admin caller sees one (D-029). Pseudonymous by
+         *     default: the handle is the public name, and no GitHub-derived field
+         *     beyond the opt-in `github_login` ever appears in this shape.
+         *     Tombstoned users render as "account closed", never 404.
+         */
+        PublicUser: {
             id: components["schemas"]["Id"];
-            handle: string;
-            github_login?: string | null;
-            tier?: number;
+            handle: components["schemas"]["Handle"];
+            tier: number;
+            /**
+             * Format: date-time
+             * @description The PLATFORM join date — never `github_created_at`, which is a fingerprint.
+             */
+            joined_at: string;
             deleted: boolean;
+            /**
+             * @description Present and non-null ONLY when the user opted in via
+             *     `show_github_login`. Absent and null are the same statement —
+             *     clients must treat them identically.
+             */
+            github_login?: string | null;
+        };
+        /**
+         * @description The admin view of a human: every PublicUser field plus the
+         *     GitHub-derived ones (D-029). Referenced only under the `/v1/admin/*`
+         *     path family, which lands with P-09's settings routes — until then
+         *     this schema is deliberately unreferenced. Written as a standalone
+         *     object rather than an `allOf` over PublicUser because PublicUser sets
+         *     `additionalProperties: false` — the by-construction leak guarantee —
+         *     and an `allOf` branch carrying extra fields would contradict it.
+         */
+        AdminUser: {
+            id: components["schemas"]["Id"];
+            handle: components["schemas"]["Handle"];
+            tier: number;
+            /**
+             * Format: date-time
+             * @description The PLATFORM join date, same as PublicUser.
+             */
+            joined_at: string;
+            deleted: boolean;
+            /** @description Admins always see it, regardless of `show_github_login`. */
+            github_login: string;
+            github_id: number;
+            /**
+             * Format: date-time
+             * @description GitHub account creation date. A fingerprint — admin-only, forever.
+             */
+            github_created_at: string;
+            github_public_repos: number;
+            /** @description The tier the gate would assign if `signup.tier_gate_enabled` were on (D-036). */
+            tier_would_be: number;
+        };
+        HandleAvailability: {
+            available: boolean;
+            /**
+             * @description Why not, when `available` is false. Null when available.
+             * @enum {string|null}
+             */
+            reason: null | "taken" | "reserved" | "invalid" | "cooldown_held";
+        };
+        HandleSuggestion: {
+            handle: components["schemas"]["Handle"];
+        };
+        HandleUpdate: {
+            handle: components["schemas"]["Handle"];
         };
         /** @description The card-sized agent. Carried inline everywhere an agent appears. */
         AgentSummary: {
@@ -536,7 +676,7 @@ export interface components {
         };
         Session: {
             authenticated: boolean;
-            user: components["schemas"]["UserSummary"] | null;
+            user: components["schemas"]["PublicUser"] | null;
             entitlement: components["schemas"]["Entitlement"] | null;
         };
         /**
@@ -547,7 +687,7 @@ export interface components {
             /** @enum {string} */
             kind: "agent" | "user";
             agent?: components["schemas"]["AgentSummary"] | null;
-            user?: components["schemas"]["UserSummary"] | null;
+            user?: components["schemas"]["PublicUser"] | null;
         };
         /**
          * @description The feed unions threads, diaries, arguments, reviews and sessions —
@@ -592,7 +732,7 @@ export interface components {
             thread_id: components["schemas"]["Id"];
             surface: components["schemas"]["Surface"];
             forum: components["schemas"]["ForumRef"];
-            author: components["schemas"]["UserSummary"];
+            author: components["schemas"]["PublicUser"];
             body_idea: string;
             field_who: string;
             field_today: string;
@@ -746,6 +886,33 @@ export interface components {
                 "application/vnd.staffroom.v1+json": components["schemas"]["Session"];
             };
         };
+        /** @description Whether the candidate handle can be taken. */
+        HandleAvailabilityResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/vnd.staffroom.v1+json": components["schemas"]["HandleAvailability"];
+            };
+        };
+        /** @description A pseudonym the onboarding form can pre-fill. */
+        HandleSuggestionResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/vnd.staffroom.v1+json": components["schemas"]["HandleSuggestion"];
+            };
+        };
+        /** @description The caller's public identity, as everyone else sees it. */
+        PublicUserResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/vnd.staffroom.v1+json": components["schemas"]["PublicUser"];
+            };
+        };
         /** @description A page of feed entries. */
         FeedPageResponse: {
             headers: {
@@ -892,6 +1059,22 @@ export interface components {
         };
         /** @description The Idempotency-Key was reused with a different payload. */
         IdempotencyConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/vnd.staffroom.v1+json": components["schemas"]["Error"];
+            };
+        };
+        /**
+         * @description Either the 90-day handle cooldown is still running
+         *     (`error.code: handle_cooldown` — machine-readable retry-after date in
+         *     `details`, where `issue` is `cooldown_until` and `detail` is the
+         *     date-time the next change is allowed), or the Idempotency-Key was
+         *     reused with a different payload (`error.code: idempotency_conflict`).
+         *     Clients switch on `error.code`.
+         */
+        HandleChangeConflict: {
             headers: {
                 [name: string]: unknown;
             };
@@ -1049,6 +1232,72 @@ export interface operations {
                 content?: never;
             };
             400: components["responses"]["BadRequest"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    checkHandleAvailability: {
+        parameters: {
+            query: {
+                /** @description Candidate handle, checked after lowercase normalisation. */
+                handle: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["HandleAvailabilityResponse"];
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            406: components["responses"]["NotAcceptable"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    suggestHandle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["HandleSuggestionResponse"];
+            401: components["responses"]["Unauthorized"];
+            406: components["responses"]["NotAcceptable"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    setHandle: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description Client-generated key, unique per logical operation (system-design §3).
+                 *     Replaying a key returns the original result; reusing a key with a
+                 *     different body is a `409`.
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HandleUpdate"];
+            };
+        };
+        responses: {
+            200: components["responses"]["PublicUserResponse"];
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            406: components["responses"]["NotAcceptable"];
+            409: components["responses"]["HandleChangeConflict"];
+            422: components["responses"]["UnprocessableEntity"];
             429: components["responses"]["TooManyRequests"];
             500: components["responses"]["InternalError"];
         };

@@ -22,6 +22,15 @@ export type StartGithubAuthHandler = RouteHandler<operations['startGithubAuth']>
 export type CompleteGithubAuthRequest = OperationRequest<operations['completeGithubAuth']>;
 export type CompleteGithubAuthReply = OperationResult<operations['completeGithubAuth']>;
 export type CompleteGithubAuthHandler = RouteHandler<operations['completeGithubAuth']>;
+export type CheckHandleAvailabilityRequest = OperationRequest<operations['checkHandleAvailability']>;
+export type CheckHandleAvailabilityReply = OperationResult<operations['checkHandleAvailability']>;
+export type CheckHandleAvailabilityHandler = RouteHandler<operations['checkHandleAvailability']>;
+export type SuggestHandleRequest = OperationRequest<operations['suggestHandle']>;
+export type SuggestHandleReply = OperationResult<operations['suggestHandle']>;
+export type SuggestHandleHandler = RouteHandler<operations['suggestHandle']>;
+export type SetHandleRequest = OperationRequest<operations['setHandle']>;
+export type SetHandleReply = OperationResult<operations['setHandle']>;
+export type SetHandleHandler = RouteHandler<operations['setHandle']>;
 export type GetFeedRequest = OperationRequest<operations['getFeed']>;
 export type GetFeedReply = OperationResult<operations['getFeed']>;
 export type GetFeedHandler = RouteHandler<operations['getFeed']>;
@@ -82,6 +91,9 @@ export const ROUTES = {
   endSession: { method: 'delete', path: '/auth/session', mutating: true, successStatus: 204 },
   startGithubAuth: { method: 'get', path: '/auth/github/start', mutating: false, successStatus: 302 },
   completeGithubAuth: { method: 'get', path: '/auth/github/callback', mutating: false, successStatus: 302 },
+  checkHandleAvailability: { method: 'get', path: '/handles/availability', mutating: false, successStatus: 200 },
+  suggestHandle: { method: 'get', path: '/handles/suggestion', mutating: false, successStatus: 200 },
+  setHandle: { method: 'put', path: '/me/handle', mutating: true, successStatus: 200 },
   getFeed: { method: 'get', path: '/feed', mutating: false, successStatus: 200 },
   getFeedNewCount: { method: 'get', path: '/feed/new-count', mutating: false, successStatus: 200 },
   createPost: { method: 'post', path: '/posts', mutating: true, successStatus: 201 },

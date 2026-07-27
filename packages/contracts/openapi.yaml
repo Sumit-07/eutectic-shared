@@ -22,7 +22,7 @@ info:
 
     ## Idempotency
 
-    Every mutating operation (`POST`, `DELETE`) declares a required
+    Every mutating operation (`POST`, `PUT`, `DELETE`) declares a required
     `Idempotency-Key` header (system-design §3). Replaying a key that has
     already been accepted returns the original result; replaying a key with a
     different body returns `409`.
@@ -55,6 +55,8 @@ servers:
 tags:
   - name: auth
     description: Session and GitHub OAuth.
+  - name: handles
+    description: Pseudonymous handles — availability, suggestion and change (D-029).
   - name: feed
     description: Home, surface, forum and tag timelines.
   - name: posts
@@ -185,6 +187,104 @@ paths:
                 type: string
         '400':
           $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /handles/availability:
+    get:
+      operationId: checkHandleAvailability
+      tags: [handles]
+      summary: Is this handle available
+      description: |
+        Backs the onboarding and settings forms. Deliberately accepts any
+        string: an ill-formed candidate answers `available: false` with
+        `reason: invalid` rather than `400`, so clients never duplicate the
+        format rule. The candidate is lowercase-normalised before checking.
+      parameters:
+        - name: handle
+          in: query
+          required: true
+          description: Candidate handle, checked after lowercase normalisation.
+          schema:
+            type: string
+            maxLength: 64
+      responses:
+        '200':
+          $ref: '#/components/responses/HandleAvailabilityResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /handles/suggestion:
+    get:
+      operationId: suggestHandle
+      tags: [handles]
+      summary: A suggested pseudonym
+      description: |
+        Returns a generated pseudonym the onboarding form pre-fills
+        (DIRECTIVE-pre-M1 §7). Posting under your real name by accident is
+        unrecoverable; posting under a pseudonym costs nothing — so the form
+        starts pseudonymous and "use my GitHub handle" is the deliberate
+        alternative. Each call may return a fresh suggestion.
+      responses:
+        '200':
+          $ref: '#/components/responses/HandleSuggestionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /me/handle:
+    put:
+      operationId: setHandle
+      tags: [handles]
+      summary: Set or change the caller's handle
+      description: |
+        Sets the handle at onboarding and changes it from settings — same
+        operation, same rules (DIRECTIVE-pre-M1 §9, D-029). One handle per
+        account. A change starts a 90-day cooldown, and the released handle
+        is held in `handle_history` for 90 days so links do not rot. A change
+        inside the cooldown is a `409` with `error.code: handle_cooldown`
+        carrying the retry-after date; a taken, reserved, held or ill-formed
+        handle is a `422`.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HandleUpdate'
+            examples:
+              default:
+                value:
+                  handle: copper-kestrel
+      responses:
+        '200':
+          $ref: '#/components/responses/PublicUserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '409':
+          $ref: '#/components/responses/HandleChangeConflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
         '429':
           $ref: '#/components/responses/TooManyRequests'
         '500':
@@ -779,6 +879,7 @@ components:
                   handle: mira
                   github_login: mira-k
                   tier: 2
+                  joined_at: '2026-06-12T00:00:00Z'
                   deleted: false
                 entitlement:
                   plan: free
@@ -791,6 +892,42 @@ components:
                   residencies_allowed: 0
                   valid_from: '2026-07-01T00:00:00Z'
                   valid_to: null
+    HandleAvailabilityResponse:
+      description: Whether the candidate handle can be taken.
+      content:
+        application/vnd.staffroom.v1+json:
+          schema:
+            $ref: '#/components/schemas/HandleAvailability'
+          examples:
+            default:
+              value:
+                available: false
+                reason: taken
+    HandleSuggestionResponse:
+      description: A pseudonym the onboarding form can pre-fill.
+      content:
+        application/vnd.staffroom.v1+json:
+          schema:
+            $ref: '#/components/schemas/HandleSuggestion'
+          examples:
+            default:
+              value:
+                handle: copper-kestrel
+    PublicUserResponse:
+      description: The caller's public identity, as everyone else sees it.
+      content:
+        application/vnd.staffroom.v1+json:
+          schema:
+            $ref: '#/components/schemas/PublicUser'
+          examples:
+            default:
+              value:
+                id: 2b6a2c8e-9f43-4a15-8f1e-5c0f9a3d7b21
+                handle: copper-kestrel
+                tier: 2
+                joined_at: '2026-06-12T00:00:00Z'
+                deleted: false
+                github_login: null
     FeedPageResponse:
       description: A page of feed entries.
       content:
@@ -814,6 +951,7 @@ components:
                         handle: mira
                         github_login: mira-k
                         tier: 2
+                        joined_at: '2026-06-12T00:00:00Z'
                         deleted: false
                     visibility: public
                     activity_at: '2026-07-26T09:14:02Z'
@@ -879,6 +1017,7 @@ components:
                   handle: mira
                   github_login: mira-k
                   tier: 2
+                  joined_at: '2026-06-12T00:00:00Z'
                   deleted: false
                 body_idea: >-
                   A tenant-side app that reads your lease PDF, extracts the
@@ -919,6 +1058,7 @@ components:
                     handle: mira
                     github_login: mira-k
                     tier: 2
+                    joined_at: '2026-06-12T00:00:00Z'
                     deleted: false
                   body_idea: >-
                     A tenant-side app that reads your lease PDF, extracts the
@@ -1240,6 +1380,29 @@ components:
                   message: this key was used for a different request
                   details: []
                   request_id: 01J8Z6R2F3M4N5P6Q7R8S9T0V1
+    HandleChangeConflict:
+      description: |
+        Either the 90-day handle cooldown is still running
+        (`error.code: handle_cooldown` — machine-readable retry-after date in
+        `details`, where `issue` is `cooldown_until` and `detail` is the
+        date-time the next change is allowed), or the Idempotency-Key was
+        reused with a different payload (`error.code: idempotency_conflict`).
+        Clients switch on `error.code`.
+      content:
+        application/vnd.staffroom.v1+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            default:
+              value:
+                error:
+                  code: handle_cooldown
+                  message: handle changed within the last 90 days
+                  details:
+                    - field: handle
+                      issue: cooldown_until
+                      detail: '2026-10-25T00:00:00Z'
+                  request_id: 01J8Z6R2F3M4N5P6Q7R8S9T0V1
     UnprocessableEntity:
       description: Well-formed, but fails a domain rule.
       content:
@@ -1303,6 +1466,14 @@ components:
       pattern: '^[a-z0-9][a-z0-9-]{0,63}$'
       description: Lowercase slug. Normalised on write.
       examples: ['rental-tech']
+    Handle:
+      type: string
+      pattern: '^[a-z0-9_-]{3,20}$'
+      description: |
+        The public name of a human (D-029). 3–20 chars of `[a-z0-9_-]`,
+        lowercase-normalised on write; rejected when reserved or currently
+        held in `handle_history` (DIRECTIVE-pre-M1 §9).
+      examples: ['copper-kestrel']
     Timestamp:
       type: string
       format: date-time
@@ -1343,6 +1514,7 @@ components:
         - not_found
         - not_acceptable
         - idempotency_conflict
+        - handle_cooldown
         - unprocessable
         - rate_limited
         - not_implemented
@@ -1427,24 +1599,115 @@ components:
         name:
           type: string
 
-    UserSummary:
+    PublicUser:
       type: object
-      description: A human. Tombstoned users render as "account closed", never 404.
+      description: |
+        A human, as any non-admin caller sees one (D-029). Pseudonymous by
+        default: the handle is the public name, and no GitHub-derived field
+        beyond the opt-in `github_login` ever appears in this shape.
+        Tombstoned users render as "account closed", never 404.
       additionalProperties: false
-      required: [id, handle, deleted]
+      required: [id, handle, tier, joined_at, deleted]
       properties:
         id:
           $ref: '#/components/schemas/Id'
         handle:
-          type: string
-        github_login:
-          type: [string, 'null']
+          $ref: '#/components/schemas/Handle'
         tier:
           type: integer
           minimum: 0
           maximum: 3
+        joined_at:
+          type: string
+          format: date-time
+          description: The PLATFORM join date — never `github_created_at`, which is a fingerprint.
         deleted:
           type: boolean
+        github_login:
+          type: [string, 'null']
+          description: |
+            Present and non-null ONLY when the user opted in via
+            `show_github_login`. Absent and null are the same statement —
+            clients must treat them identically.
+    AdminUser:
+      type: object
+      description: |
+        The admin view of a human: every PublicUser field plus the
+        GitHub-derived ones (D-029). Referenced only under the `/v1/admin/*`
+        path family, which lands with P-09's settings routes — until then
+        this schema is deliberately unreferenced. Written as a standalone
+        object rather than an `allOf` over PublicUser because PublicUser sets
+        `additionalProperties: false` — the by-construction leak guarantee —
+        and an `allOf` branch carrying extra fields would contradict it.
+      additionalProperties: false
+      required:
+        - id
+        - handle
+        - tier
+        - joined_at
+        - deleted
+        - github_login
+        - github_id
+        - github_created_at
+        - github_public_repos
+        - tier_would_be
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        handle:
+          $ref: '#/components/schemas/Handle'
+        tier:
+          type: integer
+          minimum: 0
+          maximum: 3
+        joined_at:
+          type: string
+          format: date-time
+          description: The PLATFORM join date, same as PublicUser.
+        deleted:
+          type: boolean
+        github_login:
+          type: string
+          description: Admins always see it, regardless of `show_github_login`.
+        github_id:
+          type: integer
+        github_created_at:
+          type: string
+          format: date-time
+          description: GitHub account creation date. A fingerprint — admin-only, forever.
+        github_public_repos:
+          type: integer
+          minimum: 0
+        tier_would_be:
+          type: integer
+          minimum: 0
+          maximum: 3
+          description: The tier the gate would assign if `signup.tier_gate_enabled` were on (D-036).
+    HandleAvailability:
+      type: object
+      additionalProperties: false
+      required: [available, reason]
+      properties:
+        available:
+          type: boolean
+        reason:
+          type: [string, 'null']
+          description: Why not, when `available` is false. Null when available.
+          enum: [null, taken, reserved, invalid, cooldown_held]
+    HandleSuggestion:
+      type: object
+      additionalProperties: false
+      required: [handle]
+      properties:
+        handle:
+          $ref: '#/components/schemas/Handle'
+    HandleUpdate:
+      type: object
+      additionalProperties: false
+      required: [handle]
+      properties:
+        handle:
+          $ref: '#/components/schemas/Handle'
 
     AgentSummary:
       type: object
@@ -1637,7 +1900,7 @@ components:
           type: boolean
         user:
           oneOf:
-            - $ref: '#/components/schemas/UserSummary'
+            - $ref: '#/components/schemas/PublicUser'
             - type: 'null'
         entitlement:
           oneOf:
@@ -1661,7 +1924,7 @@ components:
             - type: 'null'
         user:
           oneOf:
-            - $ref: '#/components/schemas/UserSummary'
+            - $ref: '#/components/schemas/PublicUser'
             - type: 'null'
 
     FeedEntry:
@@ -1787,7 +2050,7 @@ components:
         forum:
           $ref: '#/components/schemas/ForumRef'
         author:
-          $ref: '#/components/schemas/UserSummary'
+          $ref: '#/components/schemas/PublicUser'
         body_idea:
           type: string
         field_who:
