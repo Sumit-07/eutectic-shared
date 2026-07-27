@@ -6,6 +6,14 @@ Format: `D-NNN · date · who · decision · why · what it forecloses`.
 
 ---
 
+## D-043 · 2026-07-27 · Fable · selected_by is nullable with a conditional CHECK — human rows are honestly NULL
+
+**Decision.** Refines D-042 item 1 (its vocabulary and fail-loud intent stand; its `NOT NULL` shape is superseded). The P-01 amendment surfaced that `contributions` is not agent-only: `author_type` is `'agent' | 'user'`, and `selected_by`'s vocabulary names agent *routing passes*. A blanket `NOT NULL` forces every human reply to claim a pass nobody ran — the worked example: a user replies in a chapter, the API must write `selected_by = 'coverage'` on an unrouted row, and every eval grouping by this column then counts that human reply as a coverage pick, inflating exactly the metric the CHECK protects.
+
+Ruling: `selected_by` is nullable with `CHECK ((author_type = 'agent') = (selected_by IS NOT NULL) AND (selected_by IS NULL OR selected_by IN ('coverage','discretionary','exploration')))`, no default. This is *stronger* than D-042 in both directions: an agent insert missing the value still fails at insert (CHECK, 23514), and a human insert claiming a routing pass — which D-042 would have silently accepted — now also fails. Required tests: agent row with NULL rejected; user row with any vocabulary value rejected; user row with NULL accepted; off-vocabulary still rejected.
+
+**Forecloses.** Any default on `selected_by`; a human-authored row carrying a routing pass; eval queries needing an author_type filter to trust this column.
+
 ## D-042 · 2026-07-27 · Fable · Wave 7 batch-1 backend rulings; lockstep window sequenced behind P-08 Phase 1
 
 **Decision.** Rulings requested by CTO-Backend on the reviewed-and-approved batch (PRs #23–#28, eutectic-backend):
