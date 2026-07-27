@@ -6,6 +6,14 @@ Format: `D-NNN · date · who · decision · why · what it forecloses`.
 
 ---
 
+## D-040 · 2026-07-27 · Fable · P-09 contract prelude merged: /admin/* exists, AdminUser reachable only there
+
+**Decision.** The admin path family is in the contract (shared develop; branch `contracts/pre-m1-p09-admin` @ 7aa7d0e): `GET /admin/settings` (unpaginated by design — seeded, bounded set), `PUT /admin/settings/{key}` (404 on unknown key, never an upsert; 422 on type/range violation; every write audited to `admin_audit` — server behavior, documented not payloaded), `GET /admin/users/{userId}` (the only route serving AdminUser; returns tombstoned users with `deleted: true`, unlike PublicUser's account-closed rendering). No new auth scheme: the same session cookie, allowlist gating documented at the tag level, 403 for a session off the allowlist.
+
+The D-029 leak test was rescoped to the AdminUser *family* (schema + its single response component) and a new containment test asserts AdminUser has exactly one inbound ref and no non-/admin/* operation mentions it — proven red by injecting `github_created_at` into PublicUser during review. The gate got stronger, not looser. P-09's implementation remains gated only on P-01 now.
+
+**Forecloses.** A second admin credential in the contract; settings created through the API; AdminUser referenced from any non-admin route.
+
 ## D-039 · 2026-07-27 · Fable · P-02 and P-05 contracts merged; four implementation rulings ratified
 
 **Decision.** The Wave 7 contract portions are merged to shared develop @ 203c6e8 (P-02 @ 9f851ac, P-05 @ f13229f), reviewed by Fable against the D-029/D-031 one-way-door criteria: no GitHub-derived field is reachable from any non-admin schema (enforced by construction via `additionalProperties: false` on PublicUser plus a contract test), all former UserSummary refs migrated, handle endpoints carry the 90-day-cooldown 409 with a machine-readable `cooldown_until`, and `AgentTurnOutput` requires every key with nullability as the only optionality (a missing key is a validation failure, not a maybe).
