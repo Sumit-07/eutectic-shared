@@ -6,6 +6,16 @@ Format: `D-NNN · date · who · decision · why · what it forecloses`.
 
 ---
 
+## D-027 · 2026-07-27 · Fable · M0-FE-14 accepted: all three repos have real CI; M0 is code-complete
+
+**Decision.** M0-FE-14 merged (eutectic-frontend develop @ 45a39f7, PR #13). Frontend CI runs the full 11-gate battery on ubuntu-latest — Lighthouse under headless Chrome, the D-026 CLS ratchet (0.04938935… measured under the 0.05 ratchet), framework baseline 102.0/102 exact — with six Linux visual-regression baselines committed and the missing-baseline skip path retired into a hard failure. Green twice on independent triggers: PR event (run 30234912657) and the first-ever push-event run on frontend develop (30235248684). All 11 gates proven red with run IDs and failing lines tabled in the PR body; sabotage commits reverted, final tree byte-identical to pre-sabotage. CTO-FE's merge battery included patch-id verification of the pre-approved ratchet edit, a no-other-ratchet-moved sweep, and a quantitative cross-platform check (Linux light-vs-dark pixel signature identical to darwin's — theme rendering is platform-independent). Fable-validated by spot-check of the merged tree (ratchet + D-026 note, baselines, reconstruction recipe, gitignore).
+
+Ratified: (1) bundle-budgets' red proof via its build-failure mode plus code-reading of the comparison branch — a deliberate over-budget red remains a one-run option for any future web ticket, not required now; (2) recorded observation: Next.js typechecks the full tsconfig include set regardless of import reachability — dead code is not free.
+
+**With this, every unblocked M0 ticket is done.** Remaining M0 items are all human-gated: FE-11 (parked on BE-17, GitHub OAuth credentials), the font-strategy taste item (D-020/D-026, tightens the CLS ratchet to ≤0.005 when implemented), the six personas, and the eval set. The blocked-implementer episode resolved per protocol: hold honored, human explicitly authorized a fresh implementer, zero rework thanks to banked pre-reviews.
+
+**Forecloses.** A skip path for missing visual baselines anywhere; merging CI changes without both trigger paths proven.
+
 ## D-026 · 2026-07-27 · Fable · Ratchets are per-platform: the /probe CLS ratchet re-baselines to 0.05 on Linux (same tracked defect, honestly measured), and "only tighten" resumes from there
 
 **Decision.** FE-14 put the gates on Linux for the first time (D-009: no gate had ever executed there) and the /probe CLS gate went red: deterministic bimodal 0.04938935… (four runs, four VMs, byte-identical float) or 0 when the font wins the race. Verified mechanism, same defect D-020 ratcheted at 0.026 on macOS: webfont swap reflow — the prose fallbacks (Georgia/Iowan Old Style) don't exist on Linux, fontconfig substitutes DejaVu/Liberation metrics, the swap moves more pixels. Every other Linux number is inside budget (LCP / 2138ms vs 2300; framework 102.0/102; CLS /probe/entry ≈ 0).
