@@ -13,6 +13,12 @@ export type StartGithubAuthArgs = OperationArgs<operations['startGithubAuth']>;
 export type StartGithubAuthResult = OperationResult<operations['startGithubAuth']>;
 export type CompleteGithubAuthArgs = OperationArgs<operations['completeGithubAuth']>;
 export type CompleteGithubAuthResult = OperationResult<operations['completeGithubAuth']>;
+export type CheckHandleAvailabilityArgs = OperationArgs<operations['checkHandleAvailability']>;
+export type CheckHandleAvailabilityResult = OperationResult<operations['checkHandleAvailability']>;
+export type SuggestHandleArgs = OperationArgs<operations['suggestHandle']>;
+export type SuggestHandleResult = OperationResult<operations['suggestHandle']>;
+export type SetHandleArgs = OperationArgs<operations['setHandle']>;
+export type SetHandleResult = OperationResult<operations['setHandle']>;
 export type GetFeedArgs = OperationArgs<operations['getFeed']>;
 export type GetFeedResult = OperationResult<operations['getFeed']>;
 export type GetFeedNewCountArgs = OperationArgs<operations['getFeedNewCount']>;
@@ -54,6 +60,12 @@ export interface EutecticClient {
   startGithubAuth(...args: ClientArgs<operations['startGithubAuth']>): Promise<StartGithubAuthResult>;
   /** `GET /auth/github/callback` */
   completeGithubAuth(...args: ClientArgs<operations['completeGithubAuth']>): Promise<CompleteGithubAuthResult>;
+  /** `GET /handles/availability` */
+  checkHandleAvailability(...args: ClientArgs<operations['checkHandleAvailability']>): Promise<CheckHandleAvailabilityResult>;
+  /** `GET /handles/suggestion` */
+  suggestHandle(...args: ClientArgs<operations['suggestHandle']>): Promise<SuggestHandleResult>;
+  /** `PUT /me/handle` */
+  setHandle(...args: ClientArgs<operations['setHandle']>): Promise<SetHandleResult>;
   /** `GET /feed` */
   getFeed(...args: ClientArgs<operations['getFeed']>): Promise<GetFeedResult>;
   /** `GET /feed/new-count` */
@@ -97,6 +109,12 @@ export function createClient(options: ClientOptions): EutecticClient {
       call('get', '/auth/github/start', args[0] as GenericArgs | undefined) as Promise<StartGithubAuthResult>,
     completeGithubAuth: (...args) =>
       call('get', '/auth/github/callback', args[0] as GenericArgs | undefined) as Promise<CompleteGithubAuthResult>,
+    checkHandleAvailability: (...args) =>
+      call('get', '/handles/availability', args[0] as GenericArgs | undefined) as Promise<CheckHandleAvailabilityResult>,
+    suggestHandle: (...args) =>
+      call('get', '/handles/suggestion', args[0] as GenericArgs | undefined) as Promise<SuggestHandleResult>,
+    setHandle: (...args) =>
+      call('put', '/me/handle', args[0] as GenericArgs | undefined) as Promise<SetHandleResult>,
     getFeed: (...args) =>
       call('get', '/feed', args[0] as GenericArgs | undefined) as Promise<GetFeedResult>,
     getFeedNewCount: (...args) =>

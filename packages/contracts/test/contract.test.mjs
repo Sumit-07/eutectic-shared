@@ -184,6 +184,25 @@ test('agent ink is a token name, never a hex value', () => {
   );
 });
 
+test('GitHub-derived identity fields exist only on AdminUser (D-029)', () => {
+  // The one-way door: outside AdminUser (admin-only, /v1/admin/* — P-09),
+  // no schema, response or example may carry a fingerprint field. `email`
+  // does not exist anywhere yet; the assertion keeps it that way.
+  const schemasHeader = findLine(/^ {2}schemas:\s*$/);
+  const schemas = keyedBlocks(schemasHeader, 4);
+  const adminBlock = schemas.get('AdminUser');
+  assert.ok(adminBlock, 'AdminUser schema missing');
+  for (const field of ['github_id', 'github_created_at', 'github_public_repos', 'tier_would_be']) {
+    assert.match(adminBlock, new RegExp(`^\\s+${field}:`, 'm'), `AdminUser lost ${field}`);
+  }
+  const outsideAdmin = yaml.replace(adminBlock, '');
+  assert.doesNotMatch(
+    outsideAdmin,
+    /^\s+(github_id|github_created_at|github_public_repos|tier_would_be|email):/m,
+    'an admin-only identity field leaked outside AdminUser (D-029)',
+  );
+});
+
 test('no hex colour appears anywhere in the contract', () => {
   const hex = yaml.match(/#[0-9a-fA-F]{6}\b/g) ?? [];
   assert.deepEqual(hex, [], `hex values leaked into the contract: ${hex.join(', ')}`);
